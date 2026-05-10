@@ -22,7 +22,8 @@
 <meta name="description" content="Time Study V2 — live timers, manual entry, charts &amp; multi-study management.">
 <meta name="application-name" content="Time Study V2">
 <title>Time Study V2</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"
+        onerror="window._xlsxUnavailable=true;console.warn('[TimeStudy] XLSX library unavailable offline — open once while online to cache it.');"></script>
 <style>
   :root {
     --bg: #f5f4f0;
@@ -53,6 +54,30 @@
     --card-pad: 16px;
     --top-h: 60px;
     --tab-h: 42px;
+  }
+
+  /* ── Dark theme — applied when <html data-theme="dark"> ── */
+  [data-theme="dark"] {
+    --bg:       #111110;
+    --surface:  #1c1c1a;
+    --surface2: #252522;
+    --border:   #333330;
+    --text:     #e8e6e1;
+    --text2:    #9b9890;
+    --text3:    #5a5855;
+    --green:    #3dba6e;
+    --amber:    #d4920a;
+    --blue:     #5b8fe8;
+    --red:      #e05555;
+    --green-bg: #0d2b1a;
+    --amber-bg: #2a1f05;
+    --blue-bg:  #0d1e3a;
+    --red-bg:   #2a0d0d;
+  }
+
+  /* Desktop body background in dark mode */
+  @media (min-width: 768px) {
+    [data-theme="dark"] body { background: #0a0a09; }
   }
 
   /* ── Tablet ── */
@@ -322,7 +347,7 @@
   }
   .btn:hover { opacity: 0.82; }
   .btn:active { opacity: 0.65; }
-  .btn-primary { background: var(--text); color: #fff; }
+  .btn-primary { background: var(--text); color: var(--bg); }
   .btn-green { background: var(--green); color: #fff; }
   .btn-amber { background: var(--amber); color: #fff; }
   .btn-red { background: var(--red); color: #fff; }
@@ -784,6 +809,36 @@
   .lb-btn.danger { background: rgba(180,30,30,0.6); border-color: rgba(255,80,80,0.4); }
   .img-badge { font-size: 10px; color: var(--blue); font-family: var(--mono); }
 
+  /* THEME PICKER — 3-way segmented control */
+  .theme-picker {
+    display: flex;
+    gap: 0;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    width: 100%;
+  }
+  .theme-btn {
+    flex: 1;
+    padding: 8px 6px;
+    font-size: var(--xs-font);
+    font-family: var(--font);
+    background: var(--surface2);
+    color: var(--text2);
+    border: none;
+    border-right: 1px solid var(--border);
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+    white-space: nowrap;
+  }
+  .theme-btn:last-child { border-right: none; }
+  .theme-btn:hover { background: var(--border); color: var(--text); }
+  .theme-btn.active {
+    background: var(--text);
+    color: var(--bg);
+    font-weight: bold;
+  }
+
   /* MAIN LAYOUT — mobile: simple column, desktop: sidebar grid (defined above) */
   #main-layout {
     display: flex;
@@ -897,6 +952,32 @@ let notesDebounce = null;
 let expandedAccordions = {};
 let logFilter = '';
 
+// ===== THEME =====
+// Resolves the saved preference ('light' | 'dark' | 'device') and sets
+// data-theme on <html> so every CSS variable cascades correctly.
+function applyTheme(preference) {
+  preference = preference || (db && db.settings && db.settings.theme) || 'device';
+  let resolved;
+  if (preference === 'device') {
+    resolved = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  } else {
+    resolved = preference; // 'light' or 'dark'
+  }
+  document.documentElement.setAttribute('data-theme', resolved);
+}
+
+// Re-apply theme if the OS dark/light preference changes at runtime
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+  if (!db || db.settings.theme === 'device') applyTheme('device');
+});
+
+function setTheme(preference) {
+  db.settings.theme = preference;
+  saveDb();
+  applyTheme(preference);
+  renderSettings(); // refresh the active button state
+}
+
 // ===== DB HELPERS =====
 function generateId() {
   try { return crypto.randomUUID(); } catch(e) { return 'id-' + Date.now() + '-' + Math.random().toString(36).slice(2); }
@@ -922,7 +1003,7 @@ function defaultDb() {
       activeStudyId: studyId,
       notes: ''
     }],
-    settings: { hourMode: '12', recycleBinEnabled: true, theme: 'light' },
+    settings: { hourMode: '12', recycleBinEnabled: true, theme: 'device' },
     recyclebin: []
   };
 }
@@ -980,6 +1061,9 @@ function loadDb() {
   // Auto-purge recycle bin (30 days)
   const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
   db.recyclebin = (db.recyclebin || []).filter(e => !e.deletedAt || e.deletedAt > cutoff);
+  // Migrate theme field for existing users who have no theme key yet
+  if (!db.settings.theme) db.settings.theme = 'device';
+  applyTheme();
   saveDb();
 }
 
@@ -2546,18 +2630,27 @@ function duplicateStudy(id) {
 // ===== SETTINGS TAB =====
 function renderSettings() {
   const mode = db.settings.hourMode;
+  const theme = db.settings.theme || 'device';
   const binCount = db.recyclebin.length;
   const study = currentStudy();
 
   document.getElementById('content').innerHTML = `
   <div class="card">
     <div class="card-title">Display</div>
-    <div class="toggle-wrap">
+    <div class="toggle-wrap" style="margin-bottom:14px;">
       <label class="toggle">
         <input type="checkbox" ${mode === '24' ? 'checked' : ''} onchange="toggleHourMode(this.checked)">
         <span class="toggle-slider"></span>
       </label>
       <span class="toggle-label">24-Hour Mode ${mode === '24' ? '(on)' : '(off)'}</span>
+    </div>
+    <div style="margin-bottom:4px;">
+      <label style="display:block;margin-bottom:6px;">Appearance</label>
+      <div class="theme-picker">
+        <button class="theme-btn ${theme === 'light'  ? 'active' : ''}" onclick="setTheme('light')">☀ Light</button>
+        <button class="theme-btn ${theme === 'device' ? 'active' : ''}" onclick="setTheme('device')">⬡ Device</button>
+        <button class="theme-btn ${theme === 'dark'   ? 'active' : ''}" onclick="setTheme('dark')">☾ Dark</button>
+      </div>
     </div>
   </div>
 
@@ -2764,6 +2857,10 @@ function exportCsv() {
 }
 
 function exportXlsx() {
+  if (window._xlsxUnavailable || typeof XLSX === 'undefined') {
+    alert('XLSX export is unavailable offline until the library has been cached.\n\nPlease open the app once while connected to the internet, then try again.\n\nIn the meantime, use CSV Export — it works fully offline.');
+    return;
+  }
   try {
     const study = currentStudy();
     if (!study) { alert('No active study.'); return; }
@@ -2857,11 +2954,27 @@ function esc(str) {
 // ===== RESPONSIVE HELPERS =====
 function isDesktop() { return window.innerWidth >= 900; }
 
-// Re-render on resize so layouts (e.g. stat-grid columns) update
+// Re-render on resize so layouts (e.g. stat-grid columns) update.
+// On Android, opening the soft keyboard fires a resize event (viewport height
+// shrinks). Guard: only re-render on genuine width changes so the keyboard
+// never steals focus and dismisses itself.
 let resizeDebounce = null;
+let _lastInnerWidth = window.innerWidth;
 window.addEventListener('resize', () => {
   clearTimeout(resizeDebounce);
-  resizeDebounce = setTimeout(() => render(), 120);
+  resizeDebounce = setTimeout(() => {
+    const widthChanged = window.innerWidth !== _lastInnerWidth;
+    _lastInnerWidth = window.innerWidth;
+    if (!widthChanged) return;
+    const focused = document.activeElement;
+    const inputFocused = focused && (
+      focused.tagName === 'INPUT' ||
+      focused.tagName === 'TEXTAREA' ||
+      focused.tagName === 'SELECT'
+    );
+    if (inputFocused) return;
+    render();
+  }, 200);
 });
 
 // ===== INIT =====
@@ -2878,7 +2991,15 @@ render();
 if (activeSessions.length > 0) startTimerInterval();
 
 // ===== SERVICE WORKER =====
-if ('serviceWorker' in navigator) {
+const _swEligible = (() => {
+  const { protocol, hostname } = location;
+  if (protocol === 'file:') return false;
+  if (hostname === 'localhost' || hostname === '127.0.0.1') return false;
+  if (hostname.endsWith('claudeusercontent.com')) return false;
+  return true;
+})();
+
+if ('serviceWorker' in navigator && _swEligible) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('./sw.js', { scope: './' })
       .then(reg => {
