@@ -3103,17 +3103,25 @@ function swUpdate() {
 function updateOnlineStatus() {
   const existing = document.getElementById('_offline-bar');
   if (navigator.onLine) {
-    if (existing) existing.remove();
+    if (existing) {
+      // Fade out smoothly before removing
+      existing.style.opacity = '0';
+      setTimeout(() => existing.remove(), 400);
+    }
   } else {
     if (existing) return;
     const bar = document.createElement('div');
     bar.id = '_offline-bar';
     bar.style.cssText = `
-      position:fixed; top:0; left:0; right:0; z-index:10000;
-      background:#8a5a00; color:#fff; text-align:center;
-      padding:5px 12px; font-size:12px; font-family:Georgia,serif;
+      position:fixed; bottom:18px; right:12px; z-index:10000;
+      background:rgba(30,28,24,0.82); color:rgba(255,255,255,0.75);
+      padding:5px 10px; font-size:11px; font-family:Georgia,serif;
+      border-radius:20px; border:1px solid rgba(255,255,255,0.12);
+      backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);
+      display:flex; align-items:center; gap:5px; pointer-events:none;
+      transition:opacity 0.4s;
     `;
-    bar.textContent = '📶 You are offline — the app is fully functional, data is saved locally.';
+    bar.innerHTML = '<span style="font-size:9px;opacity:0.7;">●</span> Offline';
     document.body.appendChild(bar);
   }
 }
