@@ -2939,8 +2939,13 @@ function showNotice(msg, type) {
   div.id = '_notice';
   div.className = 'notice ' + (type === 'amber' ? 'notice-amber' : '');
   div.textContent = msg;
-  const topOffset = isDesktop() ? '80px' : '72px';
-  div.style.cssText = `position:fixed;top:${topOffset};left:50%;transform:translateX(-50%);z-index:999;max-width:420px;width:90%;box-shadow:0 4px 16px rgba(0,0,0,0.12);`;
+  // On mobile: notice sits below top-bar + tab-bar (both sticky).
+  // On desktop: tab-bar becomes a vertical sidebar, so only top-bar height applies.
+  // Use CSS variables so the offset automatically matches every breakpoint.
+  const offset = isDesktop()
+    ? 'calc(var(--top-h) + 12px)'
+    : 'calc(var(--top-h) + var(--tab-h) + 8px)';
+  div.style.cssText = `position:fixed;top:${offset};left:50%;transform:translateX(-50%);z-index:999;max-width:420px;width:90%;box-shadow:0 4px 16px rgba(0,0,0,0.18);`;
   document.body.appendChild(div);
   clearTimeout(noticeTimeout);
   noticeTimeout = setTimeout(() => div.remove(), 3000);
