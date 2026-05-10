@@ -1,0 +1,2940 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1a1916">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TimeStudy">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" sizes="152x152" href="icons/icon-152.png">
+<link rel="apple-touch-icon" sizes="144x144" href="icons/icon-144.png">
+<link rel="apple-touch-icon" sizes="128x128" href="icons/icon-128.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="icon" type="image/png" sizes="96x96" href="icons/icon-96.png">
+
+<!-- SEO / Share -->
+<meta name="description" content="Time Study V2 — live timers, manual entry, charts &amp; multi-study management.">
+<meta name="application-name" content="Time Study V2">
+<title>Time Study V2</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root {
+    --bg: #f5f4f0;
+    --surface: #ffffff;
+    --surface2: #eeede9;
+    --border: #dddbd4;
+    --text: #1a1916;
+    --text2: #6b6860;
+    --text3: #a09e99;
+    --green: #1a6b3a;
+    --amber: #8a5a00;
+    --blue: #1a4a8a;
+    --red: #8a1a1a;
+    --green-bg: #e8f5ee;
+    --amber-bg: #fdf6e3;
+    --blue-bg: #e8eef8;
+    --red-bg: #f8e8e8;
+    --radius: 10px;
+    --font: Georgia, 'Times New Roman', serif;
+    --mono: 'Courier New', Courier, monospace;
+    /* Responsive scale tokens — overridden at breakpoints below */
+    --base-font: 14px;
+    --sm-font: 12px;
+    --xs-font: 11px;
+    --lg-font: 16px;
+    --pad: 16px;
+    --pad-sm: 10px;
+    --card-pad: 16px;
+    --top-h: 60px;
+    --tab-h: 42px;
+  }
+
+  /* ── Tablet ── */
+  @media (min-width: 600px) {
+    :root {
+      --base-font: 14px;
+      --sm-font: 12px;
+      --xs-font: 11px;
+      --lg-font: 17px;
+      --pad: 20px;
+      --pad-sm: 12px;
+      --card-pad: 18px;
+      --top-h: 64px;
+      --tab-h: 44px;
+    }
+  }
+
+  /* ── Desktop ── */
+  @media (min-width: 1024px) {
+    :root {
+      --base-font: 15px;
+      --sm-font: 13px;
+      --xs-font: 12px;
+      --lg-font: 18px;
+      --pad: 28px;
+      --pad-sm: 16px;
+      --card-pad: 22px;
+      --top-h: 68px;
+      --tab-h: 48px;
+    }
+  }
+
+  /* ── Wide desktop ── */
+  @media (min-width: 1440px) {
+    :root {
+      --base-font: 15px;
+      --sm-font: 13px;
+      --lg-font: 19px;
+      --pad: 32px;
+      --card-pad: 24px;
+      --top-h: 70px;
+      --tab-h: 50px;
+    }
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body { height: 100%; }
+
+  body {
+    background: var(--bg);
+    font-family: var(--font);
+    font-size: var(--base-font);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  /* On desktop show a subtle background so the app panel stands out */
+  @media (min-width: 768px) {
+    body { background: #e8e7e2; }
+  }
+
+  #app {
+    width: 100%;
+    /* Mobile: full width; scales up gracefully on larger screens */
+    max-width: 100%;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    background: var(--bg);
+    position: relative;
+  }
+
+  @media (min-width: 600px) {
+    #app { max-width: 600px; min-height: 100vh; box-shadow: 0 0 40px rgba(0,0,0,0.12); }
+  }
+  @media (min-width: 900px) {
+    #app { max-width: 820px; border-radius: 0; }
+  }
+  @media (min-width: 1200px) {
+    #app { max-width: 1100px; }
+  }
+  @media (min-width: 1600px) {
+    #app { max-width: 1300px; }
+  }
+
+  /* Two-column layout on desktop */
+  @media (min-width: 900px) {
+    body { padding: 0; }
+    #app { flex-direction: column; }
+    #main-layout {
+      display: grid;
+      grid-template-columns: 220px 1fr;
+      flex: 1;
+      overflow: hidden;
+      min-height: calc(100vh - var(--top-h));
+    }
+    /* Vertical sidebar replaces horizontal tab bar on desktop */
+    #tab-bar {
+      position: sticky;
+      top: var(--top-h);
+      height: calc(100vh - var(--top-h));
+      flex-direction: column;
+      overflow-y: auto;
+      overflow-x: hidden;
+      border-bottom: none;
+      border-right: 1px solid var(--border);
+      padding: 10px 0;
+      width: 220px;
+    }
+    .tab-btn {
+      border-bottom: none !important;
+      border-left: 3px solid transparent;
+      border-radius: 0 8px 8px 0;
+      text-align: left;
+      padding: 12px 20px;
+      font-size: var(--sm-font);
+      width: 100%;
+    }
+    .tab-btn.active {
+      border-left-color: var(--text);
+      background: var(--surface2);
+    }
+    #content {
+      overflow-y: auto;
+      height: calc(100vh - var(--top-h));
+    }
+    /* Two-column card grid in content area on desktop */
+    #content-inner {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: var(--pad);
+      padding-bottom: 40px;
+    }
+    .stat-grid { grid-template-columns: repeat(4, 1fr); }
+    .desktop-2col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--pad);
+      align-items: start;
+    }
+  }
+
+  /* TOP BAR */
+  #top-bar {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: var(--pad-sm) var(--pad);
+    min-height: var(--top-h);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  #top-bar-title {
+    font-size: var(--lg-font);
+    font-weight: bold;
+    color: var(--text);
+    letter-spacing: 0.3px;
+    flex: 1;
+    min-width: 0;
+  }
+  #top-bar-sub {
+    font-size: var(--xs-font);
+    color: var(--text2);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 280px;
+  }
+  #profile-chip {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 5px 14px;
+    font-size: var(--sm-font);
+    color: var(--text);
+    cursor: pointer;
+    white-space: nowrap;
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-family: var(--font);
+  }
+  #profile-chip:hover { background: var(--border); }
+
+  /* TAB BAR */
+  #tab-bar {
+    position: sticky;
+    top: var(--top-h);
+    z-index: 99;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  #tab-bar::-webkit-scrollbar { display: none; }
+  .tab-btn {
+    flex-shrink: 0;
+    padding: 10px var(--pad-sm);
+    font-size: var(--sm-font);
+    font-family: var(--font);
+    color: var(--text2);
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .tab-btn:hover { color: var(--text); }
+  .tab-btn.active {
+    color: var(--text);
+    border-bottom-color: var(--text);
+    font-weight: bold;
+  }
+
+  /* CONTENT */
+  #content {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--pad);
+    padding-bottom: 40px;
+  }
+  /* On desktop #content-inner is used instead; on mobile they're the same */
+  #content-inner { width: 100%; }
+
+  /* CARDS / PANELS */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: var(--card-pad);
+    margin-bottom: 12px;
+  }
+  .card-title {
+    font-size: var(--xs-font);
+    font-weight: bold;
+    color: var(--text2);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 12px;
+  }
+
+  /* BUTTONS */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    padding: 9px 16px;
+    border-radius: 7px;
+    border: none;
+    cursor: pointer;
+    font-family: var(--font);
+    font-size: var(--base-font);
+    font-weight: bold;
+    transition: opacity 0.15s;
+  }
+  .btn:hover { opacity: 0.82; }
+  .btn:active { opacity: 0.65; }
+  .btn-primary { background: var(--text); color: #fff; }
+  .btn-green { background: var(--green); color: #fff; }
+  .btn-amber { background: var(--amber); color: #fff; }
+  .btn-red { background: var(--red); color: #fff; }
+  .btn-blue { background: var(--blue); color: #fff; }
+  .btn-ghost { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+  .btn-sm { padding: 6px 12px; font-size: var(--sm-font); border-radius: 6px; }
+  .btn-xs { padding: 4px 9px; font-size: var(--xs-font); border-radius: 5px; }
+  .btn-full { width: 100%; display: flex; }
+
+  /* FORM ELEMENTS */
+  input, select, textarea {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 9px 12px;
+    font-family: var(--font);
+    font-size: var(--base-font);
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  input:focus, select:focus, textarea:focus { border-color: var(--text2); }
+  label { font-size: var(--sm-font); color: var(--text2); display: block; margin-bottom: 4px; }
+  .form-group { margin-bottom: 10px; }
+  .form-row { display: flex; gap: 8px; align-items: flex-end; }
+  .form-row .form-group { flex: 1; margin-bottom: 0; }
+
+  /* BADGES */
+  .badge {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 20px;
+    font-size: var(--xs-font);
+    font-weight: bold;
+    font-family: var(--mono);
+  }
+  .badge-amber { background: var(--amber-bg); color: var(--amber); }
+  .badge-green { background: var(--green-bg); color: var(--green); }
+  .badge-blue { background: var(--blue-bg); color: var(--blue); }
+  .badge-red { background: var(--red-bg); color: var(--red); }
+
+  /* TIMER DISPLAY */
+  .timer-display {
+    font-family: var(--mono);
+    font-size: clamp(22px, 5vw, 30px);
+    font-weight: bold;
+    color: var(--green);
+    letter-spacing: 2px;
+  }
+  .timer-display.paused { color: var(--amber); }
+
+  /* SESSION CARD */
+  .session-card {
+    border: 2px solid var(--green);
+    border-radius: var(--radius);
+    padding: var(--card-pad);
+    margin-bottom: 12px;
+    background: var(--surface);
+    transition: border-color 0.2s;
+  }
+  .session-card.paused { border-color: var(--amber); }
+  .session-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 8px;
+  }
+  .session-activity { font-size: var(--lg-font); font-weight: bold; }
+  .session-start { font-size: var(--xs-font); color: var(--text2); font-family: var(--mono); }
+  .session-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+  .session-meta { display: flex; gap: 8px; align-items: center; margin-top: 6px; }
+  .session-note { margin-top: 8px; }
+  .session-note textarea { min-height: 50px; font-size: var(--sm-font); }
+
+  /* LOG ENTRIES */
+  .date-heading {
+    font-size: var(--xs-font);
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 6px 0 4px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 6px;
+    font-family: var(--mono);
+  }
+  .entry-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px;
+    border-radius: 7px;
+    margin-bottom: 5px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+  }
+  .entry-row:hover { border-color: var(--text3); }
+  .entry-info { flex: 1; min-width: 0; }
+  .entry-activity { font-size: var(--base-font); font-weight: bold; }
+  .entry-times { font-size: var(--xs-font); color: var(--text2); font-family: var(--mono); margin-top: 2px; }
+  .entry-note-preview { font-size: var(--xs-font); color: var(--text3); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .entry-badges { display: flex; gap: 4px; align-items: center; margin-top: 4px; flex-wrap: wrap; }
+
+  /* SUMMARY */
+  .stat-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 14px;
+    text-align: center;
+  }
+  .stat-label { font-size: var(--xs-font); color: var(--text2); margin-bottom: 4px; }
+  .stat-value { font-size: clamp(16px, 3vw, 22px); font-weight: bold; font-family: var(--mono); color: var(--text); }
+
+  .activity-summary-row {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 8px;
+    overflow: hidden;
+  }
+  .activity-summary-header {
+    padding: 12px 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    user-select: none;
+  }
+  .activity-summary-header:hover { background: var(--surface2); }
+  .activity-summary-name { font-weight: bold; font-size: var(--base-font); }
+  .activity-summary-stats { font-size: var(--xs-font); color: var(--text2); font-family: var(--mono); }
+  .activity-instances { display: none; border-top: 1px solid var(--border); }
+  .activity-instances.open { display: block; }
+  .instance-table { width: 100%; border-collapse: collapse; font-size: var(--xs-font); font-family: var(--mono); }
+  .instance-table th { background: var(--surface2); padding: 7px 10px; text-align: left; color: var(--text2); }
+  .instance-table td { padding: 6px 10px; border-top: 1px solid var(--border); }
+  .instance-table tr:hover td { background: var(--surface2); }
+  .chevron { font-size: var(--xs-font); color: var(--text3); transition: transform 0.2s; }
+  .chevron.open { transform: rotate(90deg); }
+
+  /* MANAGE */
+  .activity-manage-row {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 10px 12px;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .activity-name-edit { flex: 1; }
+
+  /* TOGGLE SWITCH */
+  .toggle-wrap { display: flex; align-items: center; gap: 10px; }
+  .toggle {
+    position: relative;
+    width: 44px;
+    height: 24px;
+    flex-shrink: 0;
+  }
+  .toggle input { opacity: 0; width: 0; height: 0; }
+  .toggle-slider {
+    position: absolute;
+    inset: 0;
+    background: var(--border);
+    border-radius: 24px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .toggle-slider:before {
+    content: '';
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    left: 3px;
+    top: 3px;
+    background: white;
+    border-radius: 50%;
+    transition: transform 0.2s;
+  }
+  .toggle input:checked + .toggle-slider { background: var(--green); }
+  .toggle input:checked + .toggle-slider:before { transform: translateX(20px); }
+  .toggle-label { font-size: var(--base-font); color: var(--text); }
+
+  /* SEARCH BAR */
+  .search-bar { margin-bottom: 10px; }
+  .search-bar input { border-radius: 20px; padding: 7px 14px; }
+
+  /* NOTICES */
+  .notice {
+    background: var(--blue-bg);
+    border: 1px solid var(--blue);
+    border-radius: 7px;
+    padding: 10px 14px;
+    font-size: var(--sm-font);
+    color: var(--blue);
+    margin-bottom: 10px;
+  }
+  .notice-amber {
+    background: var(--amber-bg);
+    border-color: var(--amber);
+    color: var(--amber);
+  }
+  .empty-state {
+    text-align: center;
+    color: var(--text3);
+    padding: 40px 0;
+    font-size: var(--base-font);
+  }
+
+  /* MODAL / BOTTOM SHEET */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.35);
+    z-index: 200;
+    align-items: flex-end;
+    justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal-sheet {
+    background: var(--surface);
+    border-radius: 16px 16px 0 0;
+    width: 100%;
+    max-width: 600px;
+    max-height: 80vh;
+    overflow-y: auto;
+    padding: 22px var(--pad) 34px;
+    animation: slideUp 0.22s ease;
+  }
+  /* On desktop, modals appear centered rather than bottom-anchored */
+  @media (min-width: 768px) {
+    .modal-overlay { align-items: center; }
+    .modal-sheet {
+      border-radius: 14px;
+      max-width: 520px;
+      max-height: 75vh;
+    }
+  }
+  @keyframes slideUp { from { transform: translateY(60px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  @media (min-width: 768px) {
+    @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  }
+  .modal-title {
+    font-size: var(--lg-font);
+    font-weight: bold;
+    margin-bottom: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .modal-close {
+    background: none;
+    border: none;
+    font-size: clamp(18px, 2.5vw, 24px);
+    cursor: pointer;
+    color: var(--text2);
+    padding: 0 4px;
+  }
+
+  /* DIVIDER */
+  .divider { border: none; border-top: 1px solid var(--border); margin: 12px 0; }
+
+  /* PROFILE ITEMS */
+  .profile-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 11px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    margin-bottom: 7px;
+    background: var(--surface);
+  }
+  .profile-item.active { border-color: var(--text); background: var(--surface2); }
+  .profile-item-name { flex: 1; font-size: var(--base-font); font-weight: bold; }
+
+  /* STUDY ITEMS */
+  .study-item {
+    padding: 11px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    margin-bottom: 7px;
+    background: var(--surface);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: border-color 0.15s;
+  }
+  .study-item:hover { border-color: var(--text3); }
+  .study-item.active { border-color: var(--text); background: var(--surface2); }
+  .study-item-info { flex: 1; min-width: 0; }
+  .study-item-name { font-weight: bold; font-size: var(--base-font); }
+  .study-item-meta { font-size: var(--xs-font); color: var(--text2); font-family: var(--mono); margin-top: 2px; }
+
+  /* RECYCLE BIN ENTRIES */
+  .bin-entry {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    margin-bottom: 7px;
+    background: var(--surface);
+  }
+  .bin-entry-info { flex: 1; font-size: var(--sm-font); }
+  .bin-entry-name { font-weight: bold; }
+  .bin-entry-meta { color: var(--text2); font-family: var(--mono); font-size: var(--xs-font); margin-top: 2px; }
+
+  /* STORAGE WARNING */
+  #storage-warn {
+    display: none;
+    background: var(--amber-bg);
+    border-bottom: 1px solid var(--amber);
+    padding: 6px var(--pad);
+    font-size: var(--xs-font);
+    color: var(--amber);
+    text-align: center;
+    position: sticky;
+    top: var(--top-h);
+    z-index: 98;
+  }
+
+  /* MISC */
+  .flex-between { display: flex; justify-content: space-between; align-items: center; }
+  .flex-gap { display: flex; gap: 6px; align-items: center; }
+  .mt8 { margin-top: 8px; }
+  .mt12 { margin-top: 12px; }
+  .mb8 { margin-bottom: 8px; }
+  .text-sm { font-size: var(--sm-font); }
+  .text-muted { color: var(--text2); }
+  .mono { font-family: var(--mono); }
+  hr.light { border: none; border-top: 1px solid var(--border); margin: 12px 0; }
+
+  /* CHARTS */
+  .chart-hint {
+    font-size: var(--xs-font);
+    color: var(--text3);
+    margin-bottom: 10px;
+    font-style: italic;
+  }
+
+  /* IMAGES */
+  .img-strip {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+    align-items: center;
+  }
+  .img-thumb-wrap {
+    position: relative;
+    width: 64px;
+    height: 64px;
+    border-radius: 7px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    cursor: pointer;
+    flex-shrink: 0;
+    background: var(--surface2);
+  }
+  .img-thumb-wrap img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .img-thumb-del {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    background: rgba(0,0,0,0.55);
+    color: #fff;
+    border: none;
+    border-radius: 50%;
+    width: 18px;
+    height: 18px;
+    font-size: 11px;
+    line-height: 18px;
+    text-align: center;
+    cursor: pointer;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .img-add-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    cursor: pointer;
+    font-size: var(--xs-font);
+    color: var(--text2);
+    font-family: var(--font);
+    white-space: nowrap;
+    transition: border-color 0.15s, color 0.15s;
+    flex-shrink: 0;
+  }
+  .img-add-btn:hover { border-color: var(--text2); color: var(--text); }
+  .img-add-btn span { font-size: var(--xs-font); font-family: var(--mono); }
+
+  /* LIGHTBOX */
+  #lightbox {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.92);
+    z-index: 300;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+  }
+  #lightbox.open { display: flex; }
+  #lightbox img {
+    max-width: 95vw;
+    max-height: 80vh;
+    object-fit: contain;
+    border-radius: 8px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+  }
+  #lightbox-bar {
+    display: flex;
+    gap: 10px;
+    margin-top: 14px;
+    align-items: center;
+  }
+  #lightbox-caption {
+    color: rgba(255,255,255,0.7);
+    font-size: 12px;
+    font-family: var(--mono);
+    margin-top: 8px;
+  }
+  .lb-btn {
+    background: rgba(255,255,255,0.15);
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.25);
+    border-radius: 7px;
+    padding: 7px 16px;
+    cursor: pointer;
+    font-family: var(--font);
+    font-size: 13px;
+  }
+  .lb-btn:hover { background: rgba(255,255,255,0.25); }
+  .lb-btn.danger { background: rgba(180,30,30,0.6); border-color: rgba(255,80,80,0.4); }
+  .img-badge { font-size: 10px; color: var(--blue); font-family: var(--mono); }
+
+  /* MAIN LAYOUT — mobile: simple column, desktop: sidebar grid (defined above) */
+  #main-layout {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+  }
+  @media (min-width: 900px) {
+    #main-layout { display: grid; grid-template-columns: 220px 1fr; flex: unset; }
+  }
+
+  /* ── Desktop sidebar tweaks ── */
+  @media (min-width: 900px) {
+    #tab-bar {
+      position: sticky;
+      top: var(--top-h);
+      height: calc(100vh - var(--top-h));
+      flex-direction: column;
+      overflow-y: auto;
+      overflow-x: hidden;
+      border-bottom: none;
+      border-right: 1px solid var(--border);
+      padding: 12px 0;
+      width: 220px;
+    }
+    .tab-btn {
+      border-bottom: none !important;
+      border-left: 3px solid transparent;
+      border-radius: 0 8px 8px 0;
+      text-align: left;
+      padding: 12px 20px;
+      font-size: var(--sm-font);
+      width: 100%;
+    }
+    .tab-btn.active {
+      border-left-color: var(--text);
+      background: var(--surface2);
+      border-bottom-color: transparent !important;
+    }
+    #content {
+      overflow-y: auto;
+      height: calc(100vh - var(--top-h));
+      padding: var(--pad);
+      padding-bottom: 50px;
+    }
+    .stat-grid { grid-template-columns: repeat(4, 1fr); }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="top-bar">
+    <div>
+      <div id="top-bar-title">Time Study V2</div>
+      <div id="top-bar-sub">No study selected</div>
+    </div>
+    <button id="profile-chip" onclick="openProfileModal()">Profile</button>
+  </div>
+  <div id="storage-warn">⚠ Storage nearly full. Export data to free space.</div>
+  <div id="main-layout">
+  <div id="tab-bar">
+    <button class="tab-btn active" onclick="switchTab('live')">▶ Live</button>
+    <button class="tab-btn" onclick="switchTab('manual')">✎ Manual</button>
+    <button class="tab-btn" onclick="switchTab('log')">📋 Log</button>
+    <button class="tab-btn" onclick="switchTab('summary')">📊 Summary</button>
+    <button class="tab-btn" onclick="switchTab('charts')">📈 Charts</button>
+    <button class="tab-btn" onclick="switchTab('notes')">📝 Notes</button>
+    <button class="tab-btn" onclick="switchTab('manage')">⚙ Manage</button>
+    <button class="tab-btn" onclick="switchTab('studies')">📁 Studies</button>
+    <button class="tab-btn" onclick="switchTab('settings')">⚙ Settings</button>
+  </div>
+  <div id="content"></div>
+  </div><!-- /#main-layout -->
+</div>
+
+<!-- Profile Modal -->
+<div class="modal-overlay" id="profile-modal">
+  <div class="modal-sheet">
+    <div class="modal-title">Switch Profile <button class="modal-close" onclick="closeModal('profile-modal')">✕</button></div>
+    <div id="profile-modal-list"></div>
+  </div>
+</div>
+
+<!-- Recycle Bin Modal -->
+<div class="modal-overlay" id="bin-modal">
+  <div class="modal-sheet">
+    <div class="modal-title">🗑 Recycle Bin <button class="modal-close" onclick="closeModal('bin-modal')">✕</button></div>
+    <div id="bin-modal-list"></div>
+  </div>
+</div>
+
+<!-- Lightbox -->
+<div id="lightbox" onclick="lbClose(event)">
+  <img id="lightbox-img" src="" alt="">
+  <div id="lightbox-caption"></div>
+  <div id="lightbox-bar">
+    <button class="lb-btn" onclick="lbPrev()">◀ Prev</button>
+    <button class="lb-btn" onclick="lbNext()">Next ▶</button>
+    <button class="lb-btn danger" onclick="lbDelete()">🗑 Delete</button>
+    <button class="lb-btn" onclick="lbDownload()">⬇ Save</button>
+    <button class="lb-btn" onclick="closeLightbox()">✕ Close</button>
+  </div>
+</div>
+
+<script>
+// ===== GLOBALS =====
+let db = null;
+let activeSessions = []; // [{id, activityName, startTs, paused, pausedAt, totalPausedMs, note, exception}]
+let timerInterval = null;
+let activeTab = 'live';
+let notesDebounce = null;
+let expandedAccordions = {};
+let logFilter = '';
+
+// ===== DB HELPERS =====
+function generateId() {
+  try { return crypto.randomUUID(); } catch(e) { return 'id-' + Date.now() + '-' + Math.random().toString(36).slice(2); }
+}
+
+function defaultDb() {
+  const profileId = generateId();
+  const studyId = generateId();
+  return {
+    activeProfileId: profileId,
+    profiles: [{
+      id: profileId,
+      name: 'Default',
+      createdAt: new Date().toISOString(),
+      studies: [{
+        id: studyId,
+        name: 'Study 1',
+        date: todayStr(),
+        activities: [],
+        entries: [],
+        manualStd: {}
+      }],
+      activeStudyId: studyId,
+      notes: ''
+    }],
+    settings: { hourMode: '12', recycleBinEnabled: true, theme: 'light' },
+    recyclebin: []
+  };
+}
+
+function todayStr() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function loadDb() {
+  // Migration from V1
+  const v1Raw = localStorage.getItem('timeStudyDb');
+  if (v1Raw && !localStorage.getItem('timeStudyDb_v2')) {
+    try {
+      const v1 = JSON.parse(v1Raw);
+      const profileId = generateId();
+      const migratedDb = defaultDb();
+      migratedDb.activeProfileId = profileId;
+      migratedDb.profiles = [{
+        id: profileId,
+        name: 'Imported (V1)',
+        createdAt: new Date().toISOString(),
+        studies: (v1.studies || []).map(s => ({
+          id: s.id || generateId(),
+          name: s.name || 'Study',
+          date: s.date || todayStr(),
+          activities: s.activities || [],
+          entries: (s.entries || []).map(e => ({
+            ...e,
+            id: e.id || Date.now(),
+            startTs: e.startTs || Date.now(),
+            endTs: e.endTs || Date.now(),
+            deletedAt: null
+          })),
+          manualStd: s.manualStd || {}
+        })),
+        activeStudyId: v1.activeStudyId || (v1.studies && v1.studies[0] && v1.studies[0].id) || generateId(),
+        notes: ''
+      }];
+      migratedDb.settings = v1.settings || migratedDb.settings;
+      localStorage.setItem('timeStudyDb_v2', JSON.stringify(migratedDb));
+      localStorage.removeItem('timeStudyDb');
+      db = migratedDb;
+      showNotice('V1 data imported successfully.', 'blue');
+      return;
+    } catch(e) { /* ignore migration errors */ }
+  }
+
+  const raw = localStorage.getItem('timeStudyDb_v2');
+  if (raw) {
+    try { db = JSON.parse(raw); }
+    catch(e) { db = defaultDb(); }
+  } else {
+    db = defaultDb();
+  }
+  // Auto-purge recycle bin (30 days)
+  const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
+  db.recyclebin = (db.recyclebin || []).filter(e => !e.deletedAt || e.deletedAt > cutoff);
+  saveDb();
+}
+
+function saveDb() {
+  localStorage.setItem('timeStudyDb_v2', JSON.stringify(db));
+  checkStorage();
+}
+
+function checkStorage() {
+  try {
+    const bytes = new Blob([localStorage.getItem('timeStudyDb_v2') || '']).size;
+    const warn = document.getElementById('storage-warn');
+    if (warn) warn.style.display = bytes > 4 * 1024 * 1024 ? 'block' : 'none';
+  } catch(e) {}
+}
+
+function currentProfile() {
+  return db.profiles.find(p => p.id === db.activeProfileId) || db.profiles[0];
+}
+
+function currentStudy() {
+  const p = currentProfile();
+  if (!p) return null;
+  return p.studies.find(s => s.id === p.activeStudyId) || p.studies[0] || null;
+}
+
+// ===== TIME HELPERS =====
+function secsToStr(n) {
+  n = Math.max(0, Math.floor(n));
+  const h = Math.floor(n / 3600);
+  const m = Math.floor((n % 3600) / 60);
+  const s = n % 60;
+  return `${pad(h)}:${pad(m)}:${pad(s)}`;
+}
+
+function pad(n) { return String(n).padStart(2, '0'); }
+
+function formatTime(ts, mode) {
+  if (!ts) return '--:--:--';
+  mode = mode || (db && db.settings && db.settings.hourMode) || '12';
+  const d = (typeof ts === 'number') ? new Date(ts) : new Date(ts);
+  if (mode === '24') {
+    return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  } else {
+    let h = d.getHours();
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    h = h % 12 || 12;
+    return `${pad(h)}:${pad(d.getMinutes())}:${pad(d.getSeconds())} ${ampm}`;
+  }
+}
+
+// Always display time from epoch timestamp when available — avoids
+// any stale AM/PM in the stored string. Falls back to parsing the
+// stored HH:MM:SS string only when no ts is available.
+function displayTime(entry, field, mode) {
+  mode = mode || (db && db.settings && db.settings.hourMode) || '12';
+  const tsKey = field === 'start' ? 'startTs' : 'endTs';
+  if (entry[tsKey]) return formatTime(entry[tsKey], mode);
+  return formatTimeStr(entry[field], mode);
+}
+
+function formatTimeStr(hms, mode) {
+  if (!hms) return '';
+  mode = mode || (db && db.settings && db.settings.hourMode) || '12';
+  // Strip any existing AM/PM suffix so we always parse clean 24h
+  const clean = hms.replace(/\s*(AM|PM)$/i, '').trim();
+  const parts = clean.split(':');
+  if (parts.length < 2) return hms;
+  let h = parseInt(parts[0], 10);
+  const m = parts[1] || '00';
+  const s = parts[2] || '00';
+  if (mode === '24') return `${pad(h)}:${m}:${s}`;
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  h = h % 12 || 12;
+  return `${pad(h)}:${m}:${s} ${ampm}`;
+}
+
+function nowTimeStr() {
+  return formatTime(Date.now(), db.settings.hourMode);
+}
+
+function nowHMS() {
+  const d = new Date();
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+
+function hmsToDate(hms) {
+  const [h, m, s] = hms.split(':').map(Number);
+  const d = new Date();
+  d.setHours(h, m, s, 0);
+  return d;
+}
+
+function hmsToTs(hms) {
+  return hmsToDate(hms).getTime();
+}
+
+function hmsToSecs(hms) {
+  const [h, m, s] = (hms || '00:00:00').split(':').map(Number);
+  return h * 3600 + m * 60 + (s || 0);
+}
+
+// ===== TIMER ENGINE =====
+function startTimerInterval() {
+  if (timerInterval) return;
+  timerInterval = setInterval(tickTimers, 1000);
+}
+
+function stopTimerInterval() {
+  clearInterval(timerInterval);
+  timerInterval = null;
+}
+
+function tickTimers() {
+  if (activeTab === 'live') renderLive();
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && activeTab === 'live') renderLive();
+});
+
+// ===== SESSIONS =====
+function getElapsed(session) {
+  if (session.paused) return Math.floor((session.pausedAt - session.startTs - session.totalPausedMs) / 1000);
+  return Math.floor((Date.now() - session.startTs - session.totalPausedMs) / 1000);
+}
+
+function startSession(activityName) {
+  const id = generateId();
+  activeSessions.push({
+    id, activityName,
+    startTs: Date.now(),
+    paused: false,
+    pausedAt: null,
+    totalPausedMs: 0,
+    note: '',
+    exception: false
+  });
+  startTimerInterval();
+  renderLive();
+}
+
+function pauseSession(id) {
+  const s = activeSessions.find(s => s.id === id);
+  if (!s || s.paused) return;
+  s.paused = true;
+  s.pausedAt = Date.now();
+  renderLive();
+}
+
+function resumeSession(id) {
+  const s = activeSessions.find(s => s.id === id);
+  if (!s || !s.paused) return;
+  s.totalPausedMs += Date.now() - s.pausedAt;
+  s.paused = false;
+  s.pausedAt = null;
+  renderLive();
+}
+
+function stopAndSave(id) {
+  const s = activeSessions.find(sess => sess.id === id);
+  if (!s) return;
+  const endTs = Date.now();
+  const duration = getElapsed(s);
+  const study = currentStudy();
+  if (!study) { alert('No active study.'); return; }
+
+  const entry = {
+    id: Date.now(),
+    activity: s.activityName,
+    date: todayStr(),
+    start: formatTime(s.startTs, '24'),
+    end: formatTime(endTs, '24'),
+    startTs: s.startTs,
+    endTs: endTs,
+    duration: duration,
+    note: s.note,
+    exception: s.exception,
+    images: SESSION_IMAGES[id] || [],
+    deletedAt: null
+  };
+  delete SESSION_IMAGES[id];
+  study.entries.push(entry);
+  saveDb();
+  activeSessions = activeSessions.filter(sess => sess.id !== id);
+  if (activeSessions.length === 0) stopTimerInterval();
+  renderLive();
+}
+
+function discardSession(id) {
+  activeSessions = activeSessions.filter(s => s.id !== id);
+  if (activeSessions.length === 0) stopTimerInterval();
+  renderLive();
+}
+
+function quickAddEntry(activityName) {
+  const study = currentStudy();
+  if (!study) { alert('No active study.'); return; }
+  const std = study.manualStd[activityName] || getAutoAvg(study, activityName);
+  if (!std) return;
+  const endTs = Date.now();
+  const startTs = endTs - std * 1000;
+  const endHMS = formatTime(endTs, '24');
+  const startHMS = formatTime(startTs, '24');
+  study.entries.push({
+    id: Date.now(),
+    activity: activityName,
+    date: todayStr(),
+    start: startHMS,
+    end: endHMS,
+    startTs,
+    endTs,
+    duration: std,
+    note: '',
+    exception: false,
+    images: [],
+    deletedAt: null
+  });
+  saveDb();
+  showNotice(`✓ Added "${activityName}" — ${secsToStr(std)}`);
+  renderLive();
+}
+
+// ===== TAB SWITCHING =====
+function switchTab(tab) {
+  activeTab = tab;
+  document.querySelectorAll('.tab-btn').forEach((b, i) => {
+    const tabs = ['live','manual','log','summary','charts','notes','manage','studies','settings'];
+    b.classList.toggle('active', tabs[i] === tab);
+  });
+  render();
+}
+
+function render() {
+  updateTopBar();
+  const tabs = {
+    live: renderLive,
+    manual: renderManual,
+    log: renderLog,
+    summary: renderSummary,
+    charts: renderCharts,
+    notes: renderNotes,
+    manage: renderManage,
+    studies: renderStudies,
+    settings: renderSettings
+  };
+  (tabs[activeTab] || renderLive)();
+}
+
+function updateTopBar() {
+  const p = currentProfile();
+  const s = currentStudy();
+  document.getElementById('profile-chip').textContent = p ? p.name : 'Profile';
+  document.getElementById('top-bar-sub').textContent = s ? `${s.name}  ·  ${s.date}` : 'No study selected';
+}
+
+// ===== LIVE TAB =====
+function renderLive() {
+  const study = currentStudy();
+  const activities = study ? study.activities : [];
+  const mode = db.settings.hourMode;
+
+  let html = `<div class="card">
+    <div class="card-title">Start New Session</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Activity</label>
+        <select id="live-act-select">
+          <option value="">-- Select --</option>
+          ${activities.map(a => `<option value="${esc(a)}">${esc(a)}</option>`).join('')}
+        </select>
+      </div>
+      <div style="flex-shrink:0;margin-bottom:0;display:flex;align-items:flex-end;">
+        <button class="btn btn-green btn-sm" onclick="liveStart()">▶ Start</button>
+      </div>
+    </div>
+    <div class="form-row mt8" style="align-items:flex-end">
+      <div class="form-group" style="flex:1">
+        <label>New Activity</label>
+        <input id="live-new-act" placeholder="Activity name" type="text">
+      </div>
+      <div style="flex-shrink:0;display:flex;align-items:flex-end;">
+        <button class="btn btn-ghost btn-sm" onclick="liveStartNew()">+ New</button>
+      </div>
+    </div>
+  </div>`;
+
+  // Quick-add for activities with standard times
+  const quickAdds = activities.filter(a => study && (study.manualStd[a] || getAutoAvg(study, a)));
+  if (quickAdds.length > 0) {
+    html += `<div class="card"><div class="card-title">Quick Add (Standard Time)</div><div style="display:flex;flex-wrap:wrap;gap:6px;">`;
+    quickAdds.forEach(a => {
+      const std = study.manualStd[a] || getAutoAvg(study, a);
+      html += `<button class="btn btn-ghost btn-sm" onclick="quickAddEntry('${esc(a)}')">${esc(a)} <span class="badge badge-blue">${secsToStr(std)}</span></button>`;
+    });
+    html += `</div></div>`;
+  }
+
+  if (activeSessions.length === 0) {
+    html += `<div class="empty-state">No active sessions.<br>Start a timer above.</div>`;
+  } else {
+    activeSessions.forEach(s => {
+      const elapsed = getElapsed(s);
+      const isPaused = s.paused;
+      html += `
+      <div class="session-card ${isPaused ? 'paused' : ''}" id="sess-${s.id}">
+        <div class="session-card-header">
+          <div>
+            <div class="session-activity">${esc(s.activityName)}</div>
+            <div class="session-start mono">${formatTime(s.startTs, mode)}</div>
+          </div>
+          <div>
+            <div class="timer-display ${isPaused ? 'paused' : ''}">${secsToStr(elapsed)}</div>
+            ${isPaused ? '<div class="badge badge-amber" style="float:right;margin-top:3px;">PAUSED</div>' : ''}
+          </div>
+        </div>
+        <div class="session-meta">
+          <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:12px;">
+            <input type="checkbox" ${s.exception ? 'checked' : ''} onchange="sessionToggleException('${s.id}', this.checked)"> Exception
+          </label>
+        </div>
+        <div class="session-note">
+          <input type="text" placeholder="Add note…" value="${esc(s.note)}" oninput="sessionNote('${s.id}', this.value)">
+        </div>
+        <div class="session-img-section">${renderSessionImgStrip(s.id)}</div>
+        <div class="session-actions">
+          ${isPaused
+            ? `<button class="btn btn-green btn-sm" onclick="resumeSession('${s.id}')">▶ Resume</button>`
+            : `<button class="btn btn-amber btn-sm" onclick="pauseSession('${s.id}')">⏸ Pause</button>`}
+          <button class="btn btn-primary btn-sm" onclick="stopAndSave('${s.id}')">⏹ Save</button>
+          <button class="btn btn-ghost btn-sm" onclick="discardSession('${s.id}')">✕ Discard</button>
+        </div>
+      </div>`;
+    });
+  }
+
+  document.getElementById('content').innerHTML = html;
+}
+
+function liveStart() {
+  const sel = document.getElementById('live-act-select');
+  const act = sel ? sel.value.trim() : '';
+  if (!act) { alert('Select an activity.'); return; }
+  startSession(act);
+}
+
+function liveStartNew() {
+  const inp = document.getElementById('live-new-act');
+  const act = inp ? inp.value.trim() : '';
+  if (!act) { alert('Enter activity name.'); return; }
+  const study = currentStudy();
+  if (study && !study.activities.includes(act)) {
+    study.activities.push(act);
+    saveDb();
+  }
+  startSession(act);
+}
+
+function sessionNote(id, val) {
+  const s = activeSessions.find(s => s.id === id);
+  if (s) s.note = val;
+}
+
+function sessionToggleException(id, val) {
+  const s = activeSessions.find(s => s.id === id);
+  if (s) s.exception = val;
+}
+
+// ===== IMAGE HANDLING =====
+// Session images stored in memory (base64) until entry is saved
+// Entry images stored in entry.images = [{id, dataUrl, caption, ts}]
+
+const SESSION_IMAGES = {}; // { sessionId: [{id, dataUrl, caption, ts}] }
+
+function sessionImgs(id) {
+  if (!SESSION_IMAGES[id]) SESSION_IMAGES[id] = [];
+  return SESSION_IMAGES[id];
+}
+
+function imgId() {
+  return 'img-' + Date.now() + '-' + Math.random().toString(36).slice(2,6);
+}
+
+// Trigger file/camera input for a session
+function sessionAddImage(sessionId) {
+  const inp = document.createElement('input');
+  inp.type = 'file';
+  inp.accept = 'image/*';
+  inp.capture = 'environment'; // prefer back camera on mobile
+  inp.multiple = true;
+  inp.style.display = 'none';
+  document.body.appendChild(inp);
+  inp.onchange = () => {
+    const files = Array.from(inp.files || []);
+    let loaded = 0;
+    files.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = ev => {
+        sessionImgs(sessionId).push({ id: imgId(), dataUrl: ev.target.result, caption: '', ts: Date.now() });
+        loaded++;
+        if (loaded === files.length) renderLive();
+      };
+      reader.readAsDataURL(file);
+    });
+    document.body.removeChild(inp);
+  };
+  inp.click();
+}
+
+// Trigger file/camera for an existing saved entry
+function entryAddImage(entryId) {
+  const inp = document.createElement('input');
+  inp.type = 'file';
+  inp.accept = 'image/*';
+  inp.capture = 'environment';
+  inp.multiple = true;
+  inp.style.display = 'none';
+  document.body.appendChild(inp);
+  inp.onchange = () => {
+    const study = currentStudy();
+    const entry = study && study.entries.find(e => e.id === entryId);
+    if (!entry) { document.body.removeChild(inp); return; }
+    if (!entry.images) entry.images = [];
+    const files = Array.from(inp.files || []);
+    let loaded = 0;
+    files.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = ev => {
+        entry.images.push({ id: imgId(), dataUrl: ev.target.result, caption: '', ts: Date.now() });
+        loaded++;
+        if (loaded === files.length) { saveDb(); renderLog(); }
+      };
+      reader.readAsDataURL(file);
+    });
+    document.body.removeChild(inp);
+  };
+  inp.click();
+}
+
+function sessionDeleteImage(sessionId, imgId) {
+  SESSION_IMAGES[sessionId] = (SESSION_IMAGES[sessionId] || []).filter(i => i.id !== imgId);
+  renderLive();
+}
+
+// Render an image strip for a session (inline in live card)
+function renderSessionImgStrip(sessionId) {
+  const imgs = sessionImgs(sessionId);
+  let html = `<div class="img-strip">`;
+  imgs.forEach(img => {
+    html += `<div class="img-thumb-wrap" onclick="openLightboxSession('${sessionId}','${img.id}')">
+               <img src="${img.dataUrl}" alt="">
+               <button class="img-thumb-del" onclick="event.stopPropagation();sessionDeleteImage('${sessionId}','${img.id}')">✕</button>
+             </div>`;
+  });
+  html += `<div class="img-add-btn" onclick="sessionAddImage('${sessionId}')">📷 Add photo</div>`;
+  html += `</div>`;
+  return html;
+}
+
+// Render image strip for a saved entry (in log)
+function renderEntryImgStrip(entry) {
+  const imgs = entry.images || [];
+  if (imgs.length === 0) return `<div class="img-strip">
+    <div class="img-add-btn" onclick="entryAddImage(${entry.id})">📷 Add photo</div>
+  </div>`;
+  let html = `<div class="img-strip">`;
+  imgs.forEach(img => {
+    html += `<div class="img-thumb-wrap" onclick="openLightboxEntry(${entry.id},'${img.id}')">
+               <img src="${img.dataUrl}" alt="">
+             </div>`;
+  });
+  html += `<div class="img-add-btn" onclick="entryAddImage(${entry.id})">📷 Add photo</div>`;
+  html += `</div>`;
+  return html;
+}
+
+// ===== LIGHTBOX =====
+let lbCtx = null; // { type:'session'|'entry', sessionId/entryId, imgId }
+
+function lbGetImgs() {
+  if (!lbCtx) return [];
+  if (lbCtx.type === 'session') return sessionImgs(lbCtx.sessionId);
+  if (lbCtx.type === 'manual') return manImages;
+  const study = currentStudy();
+  const entry = study && study.entries.find(e => e.id === lbCtx.entryId);
+  return entry ? (entry.images || []) : [];
+}
+
+function lbCurrentIdx() {
+  return lbGetImgs().findIndex(i => i.id === lbCtx.imgId);
+}
+
+function openLightboxSession(sessionId, imgId) {
+  lbCtx = { type: 'session', sessionId, imgId };
+  lbShow();
+}
+
+function openLightboxEntry(entryId, imgId) {
+  lbCtx = { type: 'entry', entryId, imgId };
+  lbShow();
+}
+
+function lbShow() {
+  const imgs = lbGetImgs();
+  const idx = lbCurrentIdx();
+  if (idx === -1 || !imgs[idx]) return;
+  const img = imgs[idx];
+  document.getElementById('lightbox-img').src = img.dataUrl;
+  document.getElementById('lightbox-caption').textContent =
+    `${idx + 1} / ${imgs.length}${img.caption ? '  ·  ' + img.caption : ''}`;
+  document.getElementById('lightbox').classList.add('open');
+}
+
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('open');
+  document.getElementById('lightbox-img').src = '';
+  lbCtx = null;
+}
+
+function lbClose(e) { if (e.target === document.getElementById('lightbox')) closeLightbox(); }
+
+function lbPrev() {
+  const imgs = lbGetImgs();
+  const idx = lbCurrentIdx();
+  if (idx > 0) { lbCtx.imgId = imgs[idx - 1].id; lbShow(); }
+}
+
+function lbNext() {
+  const imgs = lbGetImgs();
+  const idx = lbCurrentIdx();
+  if (idx < imgs.length - 1) { lbCtx.imgId = imgs[idx + 1].id; lbShow(); }
+}
+
+function lbDelete() {
+  if (!confirm('Remove this image?')) return;
+  if (lbCtx.type === 'session') {
+    SESSION_IMAGES[lbCtx.sessionId] = (SESSION_IMAGES[lbCtx.sessionId] || []).filter(i => i.id !== lbCtx.imgId);
+  } else {
+    const study = currentStudy();
+    const entry = study && study.entries.find(e => e.id === lbCtx.entryId);
+    if (entry) { entry.images = (entry.images || []).filter(i => i.id !== lbCtx.imgId); saveDb(); }
+  }
+  const imgs = lbGetImgs();
+  if (imgs.length === 0) { closeLightbox(); if (activeTab === 'log') renderLog(); else renderLive(); return; }
+  const newIdx = Math.min(lbCurrentIdx(), imgs.length - 1);
+  lbCtx.imgId = imgs[Math.max(0, newIdx === -1 ? 0 : newIdx)].id;
+  lbShow();
+  if (activeTab === 'log') renderLog(); else renderLive();
+}
+
+function lbDownload() {
+  const imgs = lbGetImgs();
+  const idx = lbCurrentIdx();
+  if (idx === -1) return;
+  const a = document.createElement('a');
+  a.href = imgs[idx].dataUrl;
+  a.download = `timestudy-img-${Date.now()}.jpg`;
+  a.click();
+}
+
+// Keyboard nav for lightbox
+document.addEventListener('keydown', e => {
+  if (!lbCtx) return;
+  if (e.key === 'ArrowLeft') lbPrev();
+  if (e.key === 'ArrowRight') lbNext();
+  if (e.key === 'Escape') closeLightbox();
+});
+
+// ===== MANUAL TAB =====
+function renderManual() {
+  const study = currentStudy();
+  const activities = study ? study.activities : [];
+
+  const mode = db.settings.hourMode;
+  const html = `
+  <div class="card">
+    <div class="card-title">Manual Entry</div>
+    <div class="form-group">
+      <label>Activity</label>
+      <select id="man-act-select">
+        <option value="">-- Select --</option>
+        ${activities.map(a => `<option value="${esc(a)}">${esc(a)}</option>`).join('')}
+      </select>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>New Activity</label>
+        <input id="man-new-act" placeholder="Or type new…" type="text">
+      </div>
+      <div style="flex-shrink:0;display:flex;align-items:flex-end;">
+        <button class="btn btn-ghost btn-sm" onclick="manAddActivity()">+</button>
+      </div>
+    </div>
+    <div class="form-row mt8">
+      <div class="form-group">
+        <label>Start Time <span class="text-muted">(${mode === '24' ? '24h' : '12h'})</span></label>
+        <input type="time" step="1" id="man-start" value="${nowHMS()}" oninput="manUpdateDisplay()">
+        <div id="man-start-display" class="mono text-sm" style="margin-top:3px;color:var(--blue);min-height:16px;"></div>
+      </div>
+      <div style="flex-shrink:0;display:flex;align-items:flex-end;padding-bottom:22px;">
+        <button class="btn btn-ghost btn-sm" onclick="manNow('man-start')">Now</button>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>End Time <span class="text-muted">(${mode === '24' ? '24h' : '12h'})</span></label>
+        <input type="time" step="1" id="man-end" value="${nowHMS()}" oninput="manUpdateDisplay()">
+        <div id="man-end-display" class="mono text-sm" style="margin-top:3px;color:var(--blue);min-height:16px;"></div>
+      </div>
+      <div style="flex-shrink:0;display:flex;align-items:flex-end;padding-bottom:22px;">
+        <button class="btn btn-ghost btn-sm" onclick="manNow('man-end')">Now</button>
+      </div>
+    </div>
+    <div id="man-duration" class="text-sm text-muted mono mt8"></div>
+    <div class="form-group mt8">
+      <label style="display:flex;align-items:center;gap:5px;cursor:pointer;">
+        <input type="checkbox" id="man-exception"> Exception
+      </label>
+    </div>
+    <div class="form-group">
+      <label>Note</label>
+      <textarea id="man-note" rows="2" placeholder="Optional note…"></textarea>
+    </div>
+    <div class="form-group">
+      <label>Photos</label>
+      <div id="man-img-strip"><div class="img-strip"><div class="img-add-btn" onclick="manAddImage()">📷 Add photo</div></div></div>
+    </div>
+    <button class="btn btn-primary btn-full mt8" onclick="manSave()">Save Entry</button>
+  </div>`;
+  document.getElementById('content').innerHTML = html;
+
+  // Duration preview + formatted display
+  document.getElementById('man-start').addEventListener('input', manUpdateDuration);
+  document.getElementById('man-end').addEventListener('input', manUpdateDuration);
+  manUpdateDuration();
+  manUpdateDisplay();
+}
+
+function manNow(id) {
+  document.getElementById(id).value = nowHMS();
+  manUpdateDuration();
+  manUpdateDisplay();
+}
+
+function manUpdateDisplay() {
+  const mode = db.settings.hourMode;
+  const s = document.getElementById('man-start');
+  const e = document.getElementById('man-end');
+  const sd = document.getElementById('man-start-display');
+  const ed = document.getElementById('man-end-display');
+  if (s && sd) sd.textContent = s.value ? formatTimeStr(s.value, mode) : '';
+  if (e && ed) ed.textContent = e.value ? formatTimeStr(e.value, mode) : '';
+}
+
+// Temporary image buffer for manual entry
+let manImages = [];
+
+function manAddImage() {
+  const inp = document.createElement('input');
+  inp.type = 'file';
+  inp.accept = 'image/*';
+  inp.capture = 'environment';
+  inp.multiple = true;
+  inp.style.display = 'none';
+  document.body.appendChild(inp);
+  inp.onchange = () => {
+    const files = Array.from(inp.files || []);
+    let loaded = 0;
+    files.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = ev => {
+        manImages.push({ id: imgId(), dataUrl: ev.target.result, caption: '', ts: Date.now() });
+        loaded++;
+        if (loaded === files.length) renderManImgStrip();
+      };
+      reader.readAsDataURL(file);
+    });
+    document.body.removeChild(inp);
+  };
+  inp.click();
+}
+
+function renderManImgStrip() {
+  const el = document.getElementById('man-img-strip');
+  if (!el) return;
+  let html = `<div class="img-strip">`;
+  manImages.forEach(img => {
+    html += `<div class="img-thumb-wrap" onclick="openLightboxManual('${img.id}')">
+               <img src="${img.dataUrl}" alt="">
+               <button class="img-thumb-del" onclick="event.stopPropagation();manDeleteImage('${img.id}')">✕</button>
+             </div>`;
+  });
+  html += `<div class="img-add-btn" onclick="manAddImage()">📷 Add photo</div></div>`;
+  el.innerHTML = html;
+}
+
+function manDeleteImage(id) {
+  manImages = manImages.filter(i => i.id !== id);
+  renderManImgStrip();
+}
+
+function openLightboxManual(imgId) {
+  lbCtx = { type: 'manual', imgId };
+  const imgs = manImages;
+  const idx = imgs.findIndex(i => i.id === imgId);
+  if (idx === -1) return;
+  document.getElementById('lightbox-img').src = imgs[idx].dataUrl;
+  document.getElementById('lightbox-caption').textContent = `${idx+1} / ${imgs.length}`;
+  document.getElementById('lightbox').classList.add('open');
+}
+
+// manImages is used by lbGetImgs via lbCtx.type === 'manual'
+
+function manUpdateDuration() {
+  const s = document.getElementById('man-start');
+  const e = document.getElementById('man-end');
+  const d = document.getElementById('man-duration');
+  if (!s || !e || !d) return;
+  const secs = hmsToSecs(e.value) - hmsToSecs(s.value);
+  d.textContent = secs >= 0 ? `Duration: ${secsToStr(secs)}` : 'End must be after start';
+  d.style.color = secs >= 0 ? 'var(--text2)' : 'var(--red)';
+  manUpdateDisplay();
+}
+
+function manAddActivity() {
+  const inp = document.getElementById('man-new-act');
+  const act = inp ? inp.value.trim() : '';
+  if (!act) return;
+  const study = currentStudy();
+  if (study && !study.activities.includes(act)) {
+    study.activities.push(act);
+    saveDb();
+    renderManual();
+    // Re-select the new activity
+    setTimeout(() => {
+      const sel = document.getElementById('man-act-select');
+      if (sel) sel.value = act;
+    }, 50);
+  }
+}
+
+function manSave() {
+  let act = document.getElementById('man-act-select').value;
+  const newAct = document.getElementById('man-new-act').value.trim();
+  if (!act && newAct) act = newAct;
+  if (!act) { alert('Select or enter an activity.'); return; }
+
+  const startHMS = document.getElementById('man-start').value;
+  const endHMS = document.getElementById('man-end').value;
+  const startSecs = hmsToSecs(startHMS);
+  const endSecs = hmsToSecs(endHMS);
+
+  if (endSecs <= startSecs) { alert('End time must be after start time.'); return; }
+
+  const study = currentStudy();
+  if (!study) { alert('No active study.'); return; }
+
+  if (!study.activities.includes(act)) study.activities.push(act);
+
+  const startTs = hmsToTs(startHMS);
+  const endTs = hmsToTs(endHMS);
+
+  study.entries.push({
+    id: Date.now(),
+    activity: act,
+    date: todayStr(),
+    start: startHMS,
+    end: endHMS,
+    startTs,
+    endTs,
+    duration: endSecs - startSecs,
+    note: document.getElementById('man-note').value,
+    exception: document.getElementById('man-exception').checked,
+    images: [...manImages],
+    deletedAt: null
+  });
+  manImages = [];
+  saveDb();
+  showNotice('Entry saved!');
+  renderManual();
+}
+
+// ===== LOG TAB =====
+function renderLog() {
+  const study = currentStudy();
+  const entries = (study ? study.entries : []).filter(e => !e.deletedAt);
+  const mode = db.settings.hourMode;
+
+  // Filter
+  const filtered = logFilter
+    ? entries.filter(e => e.activity.toLowerCase().includes(logFilter.toLowerCase()))
+    : entries;
+
+  // Sort newest first
+  const sorted = [...filtered].sort((a, b) => (b.startTs || 0) - (a.startTs || 0));
+
+  // Group by date
+  const groups = {};
+  sorted.forEach(e => { (groups[e.date] = groups[e.date] || []).push(e); });
+  const dates = Object.keys(groups).sort((a, b) => b.localeCompare(a));
+
+  let html = `
+  <div class="search-bar">
+    <input type="search" placeholder="Filter by activity…" value="${esc(logFilter)}" oninput="logSearch(this.value)">
+  </div>
+  <div class="flex-between mb8">
+    <span class="text-sm text-muted">${filtered.length} entr${filtered.length === 1 ? 'y' : 'ies'}</span>
+    <button class="btn btn-red btn-xs" onclick="logClearAll()">Clear All</button>
+  </div>`;
+
+  if (dates.length === 0) {
+    html += `<div class="empty-state">No entries yet.</div>`;
+  }
+
+  dates.forEach(date => {
+    html += `<div class="date-heading">${date}</div>`;
+    groups[date].forEach(e => {
+      const dur = secsToStr(e.duration);
+      const timeRange = `${displayTime(e, 'start', mode)} → ${displayTime(e, 'end', mode)}`;
+      const imgCount = (e.images || []).length;
+      html += `
+      <div class="entry-row" style="flex-direction:column;align-items:stretch;">
+        <div style="display:flex;align-items:flex-start;gap:10px;">
+          <div class="entry-info">
+            <div class="entry-activity">${esc(e.activity)}</div>
+            <div class="entry-times">${timeRange} · ${dur}</div>
+            ${e.note ? `<div class="entry-note-preview">${esc(e.note)}</div>` : ''}
+            <div class="entry-badges">
+              ${e.exception ? '<span class="badge badge-amber">Exception</span>' : ''}
+              ${imgCount > 0 ? `<span class="badge badge-blue">📷 ${imgCount}</span>` : ''}
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;">
+            <button class="btn btn-red btn-xs" onclick="logDelete(${e.id})">🗑</button>
+          </div>
+        </div>
+        ${renderEntryImgStrip(e)}
+      </div>`;
+    });
+  });
+
+  document.getElementById('content').innerHTML = html;
+}
+
+function logSearch(val) {
+  logFilter = val;
+  renderLog();
+}
+
+function logDelete(id) {
+  if (!confirm('Move this entry to the recycle bin?')) return;
+  const study = currentStudy();
+  if (!study) return;
+  const idx = study.entries.findIndex(e => e.id === id);
+  if (idx === -1) return;
+  const entry = study.entries.splice(idx, 1)[0];
+  entry.deletedAt = Date.now();
+  entry._studyId = study.id;
+  entry._profileId = db.activeProfileId;
+  db.recyclebin.push(entry);
+  saveDb();
+  renderLog();
+}
+
+function logClearAll() {
+  if (!confirm('Move ALL entries to recycle bin?')) return;
+  const study = currentStudy();
+  if (!study) return;
+  study.entries.forEach(e => {
+    e.deletedAt = Date.now();
+    e._studyId = study.id;
+    e._profileId = db.activeProfileId;
+    db.recyclebin.push(e);
+  });
+  study.entries = [];
+  saveDb();
+  renderLog();
+}
+
+// ===== CHARTS TAB =====
+function renderCharts() {
+  const study = currentStudy();
+  if (!study) { document.getElementById('content').innerHTML = '<div class="empty-state">No study selected.</div>'; return; }
+  const entries = (study.entries || []).filter(e => !e.deletedAt);
+  if (entries.length === 0) { document.getElementById('content').innerHTML = '<div class="empty-state">No entries yet — start timing to see charts.</div>'; return; }
+
+  const W = Math.min(document.getElementById('content').clientWidth - 28, 780);
+
+  document.getElementById('content').innerHTML = `
+    <div class="card">
+      <div class="card-title">① Pareto — Cumulative Time by Activity</div>
+      <div class="chart-hint">Which activities consume the most time? Focus on the left bars.</div>
+      <div id="chart-pareto" style="overflow-x:auto;"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">② Time Share by Activity</div>
+      <div class="chart-hint">Proportional breakdown of total time spent.</div>
+      <div id="chart-bar" style="overflow-x:auto;"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">③ Daily Entry Count Trend</div>
+      <div class="chart-hint">How many observations were recorded each day?</div>
+      <div id="chart-trend" style="overflow-x:auto;"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">④ Duration Distribution (Histogram)</div>
+      <div class="chart-hint">Are your task durations tightly clustered or highly variable?</div>
+      <div id="chart-hist" style="overflow-x:auto;"></div>
+    </div>
+  `;
+
+  drawPareto(entries, W);
+  drawBar(entries, W);
+  drawTrend(entries, W);
+  drawHistogram(entries, W);
+}
+
+// ── Shared chart helpers ──────────────────────────────────────────────────────
+const CHART_COLORS = ['#1a6b3a','#1a4a8a','#8a5a00','#8a1a1a','#4a1a8a','#1a6b6b','#6b1a6b','#3a6b1a','#6b3a1a','#1a3a6b'];
+
+function svgEsc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function makeAxes(W, H, ml, mr, mt, mb, xLabels, yTicks, title) {
+  const iW = W - ml - mr;
+  const iH = H - mt - mb;
+  let s = `<line x1="${ml}" y1="${mt}" x2="${ml}" y2="${mt+iH}" stroke="var(--border)" stroke-width="1.5"/>
+           <line x1="${ml}" y1="${mt+iH}" x2="${ml+iW}" y2="${mt+iH}" stroke="var(--border)" stroke-width="1.5"/>`;
+  // y grid lines
+  yTicks.forEach(t => {
+    const y = mt + iH - t.frac * iH;
+    s += `<line x1="${ml}" y1="${y}" x2="${ml+iW}" y2="${y}" stroke="var(--border)" stroke-width="0.7" stroke-dasharray="3,3"/>
+          <text x="${ml-6}" y="${y+4}" text-anchor="end" font-size="10" fill="var(--text2)" font-family="monospace">${svgEsc(t.label)}</text>`;
+  });
+  // x labels
+  xLabels.forEach(l => {
+    s += `<text x="${l.x}" y="${mt+iH+14}" text-anchor="middle" font-size="10" fill="var(--text2)" font-family="monospace"
+            transform="rotate(-28,${l.x},${mt+iH+14})">${svgEsc(l.label)}</text>`;
+  });
+  return s;
+}
+
+function yTicksFrac(maxVal, steps) {
+  const step = niceStep(maxVal, steps);
+  const ticks = [];
+  for (let v = step; v <= maxVal * 1.01; v += step) {
+    ticks.push({ frac: v / maxVal, label: fmtTickVal(v) });
+  }
+  return ticks;
+}
+
+function niceStep(maxVal, steps) {
+  const raw = maxVal / steps;
+  const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+  const norm = raw / mag;
+  const nice = norm < 1.5 ? 1 : norm < 3.5 ? 2 : norm < 7.5 ? 5 : 10;
+  return nice * mag;
+}
+
+function fmtTickVal(v) {
+  if (v >= 3600) return (v/3600).toFixed(1) + 'h';
+  if (v >= 60) return Math.round(v/60) + 'm';
+  return Math.round(v) + 's';
+}
+
+function truncLabel(s, n) { return s.length > n ? s.slice(0, n-1) + '…' : s; }
+
+// ── Chart 1: Pareto ───────────────────────────────────────────────────────────
+function drawPareto(entries, W) {
+  // Aggregate total time per activity, sort descending
+  const map = {};
+  entries.forEach(e => { map[e.activity] = (map[e.activity] || 0) + (e.duration || 0); });
+  const sorted = Object.entries(map).sort((a, b) => b[1] - a[1]);
+  if (!sorted.length) return;
+
+  const total = sorted.reduce((s, [,v]) => s + v, 0);
+  const N = sorted.length;
+  const ml = 56, mr = 50, mt = 20, mb = 60;
+  const H = Math.max(220, Math.min(320, 180 + N * 18));
+  const iW = W - ml - mr;
+  const iH = H - mt - mb;
+  const maxVal = sorted[0][1];
+  const barW = Math.max(6, Math.min(48, iW / N - 6));
+
+  const yTicks = yTicksFrac(maxVal, 5);
+
+  let bars = '', labels = [], cumPts = [];
+  let cumSum = 0;
+
+  sorted.forEach(([act, val], i) => {
+    const x = ml + (i / N) * iW + (iW / N - barW) / 2;
+    const barH = (val / maxVal) * iH;
+    const y = mt + iH - barH;
+    const color = CHART_COLORS[i % CHART_COLORS.length];
+    cumSum += val;
+    const cumFrac = cumSum / total;
+    const cx = ml + (i / N) * iW + iW / (N * 2);
+    const cy = mt + iH * (1 - cumFrac);
+
+    bars += `<rect x="${x}" y="${y}" width="${barW}" height="${barH}" fill="${color}" rx="3" opacity="0.88">
+               <title>${svgEsc(act)}: ${secsToStr(val)} (${Math.round(val/total*100)}%)</title>
+             </rect>`;
+    cumPts.push([cx, cy]);
+    labels.push({ x: cx, label: truncLabel(act, 10) });
+  });
+
+  // Cumulative % line
+  let linePath = cumPts.map((p, i) => (i === 0 ? `M${p[0]},${p[1]}` : `L${p[0]},${p[1]}`)).join(' ');
+  let dots = cumPts.map(([cx, cy], i) => {
+    const cumFrac = sorted.slice(0, i+1).reduce((s,[,v])=>s+v,0)/total;
+    return `<circle cx="${cx}" cy="${cy}" r="4" fill="var(--red)" stroke="white" stroke-width="1.5">
+              <title>${Math.round(cumFrac*100)}% cumulative</title>
+            </circle>`;
+  }).join('');
+
+  // Right axis: 0%–100%
+  let rightAxis = '';
+  [0,25,50,75,100].forEach(pct => {
+    const y = mt + iH * (1 - pct/100);
+    rightAxis += `<text x="${ml+iW+6}" y="${y+4}" font-size="9" fill="var(--red)" font-family="monospace">${pct}%</text>`;
+  });
+
+  // 80% line
+  const y80 = mt + iH * 0.20;
+  const axes = makeAxes(W, H, ml, mr, mt, mb, labels, yTicks, '');
+  const svg = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="display:block">
+    ${axes}
+    ${bars}
+    <path d="${linePath}" fill="none" stroke="var(--red)" stroke-width="2" stroke-dasharray="5,2"/>
+    ${dots}
+    ${rightAxis}
+    <line x1="${ml}" y1="${y80}" x2="${ml+iW}" y2="${y80}" stroke="var(--red)" stroke-width="1" stroke-dasharray="6,3" opacity="0.5"/>
+    <text x="${ml+iW-2}" y="${y80-4}" text-anchor="end" font-size="9" fill="var(--red)" font-family="monospace">80%</text>
+  </svg>`;
+  document.getElementById('chart-pareto').innerHTML = svg;
+}
+
+// ── Chart 2: Horizontal Bar (Time Share) ─────────────────────────────────────
+function drawBar(entries, W) {
+  const map = {};
+  entries.forEach(e => { map[e.activity] = (map[e.activity] || 0) + (e.duration || 0); });
+  const sorted = Object.entries(map).sort((a, b) => b[1] - a[1]);
+  if (!sorted.length) return;
+
+  const total = sorted.reduce((s,[,v]) => s+v, 0);
+  const N = sorted.length;
+  const rowH = 30, ml = 110, mr = 70, mt = 14, mb = 10;
+  const H = mt + mb + N * rowH;
+  const iW = W - ml - mr;
+  const maxVal = sorted[0][1];
+
+  let rows = '';
+  sorted.forEach(([act, val], i) => {
+    const y = mt + i * rowH;
+    const barW = (val / maxVal) * iW;
+    const color = CHART_COLORS[i % CHART_COLORS.length];
+    const pct = Math.round(val / total * 100);
+    rows += `
+      <text x="${ml-8}" y="${y+19}" text-anchor="end" font-size="11" fill="var(--text2)" font-family="monospace">${svgEsc(truncLabel(act, 14))}</text>
+      <rect x="${ml}" y="${y+6}" width="${barW}" height="18" fill="${color}" rx="3" opacity="0.85">
+        <title>${svgEsc(act)}: ${secsToStr(val)} · ${pct}%</title>
+      </rect>
+      <text x="${ml+barW+5}" y="${y+19}" font-size="10" fill="var(--text)" font-family="monospace">${secsToStr(val)} (${pct}%)</text>
+    `;
+  });
+
+  const svg = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="display:block">
+    <line x1="${ml}" y1="${mt}" x2="${ml}" y2="${H-mb}" stroke="var(--border)" stroke-width="1.5"/>
+    ${rows}
+  </svg>`;
+  document.getElementById('chart-bar').innerHTML = svg;
+}
+
+// ── Chart 3: Daily Trend (entry count) ───────────────────────────────────────
+function drawTrend(entries, W) {
+  // Count entries per date
+  const map = {};
+  entries.forEach(e => { map[e.date] = (map[e.date] || 0) + 1; });
+  const dates = Object.keys(map).sort();
+  if (dates.length < 2) {
+    document.getElementById('chart-trend').innerHTML =
+      `<div class="empty-state" style="padding:20px 0">Need entries on at least 2 different dates.</div>`;
+    return;
+  }
+
+  const vals = dates.map(d => map[d]);
+  const maxVal = Math.max(...vals);
+  const ml = 46, mr = 16, mt = 20, mb = 54;
+  const H = 200;
+  const iW = W - ml - mr;
+  const iH = H - mt - mb;
+  const N = dates.length;
+
+  const pts = dates.map((d, i) => {
+    const x = ml + (i / (N - 1)) * iW;
+    const y = mt + iH - (vals[i] / maxVal) * iH;
+    return [x, y, vals[i], d];
+  });
+
+  const yTicks = [];
+  for (let v = 1; v <= maxVal; v++) {
+    if (maxVal <= 8 || v % Math.ceil(maxVal / 5) === 0) {
+      yTicks.push({ frac: v / maxVal, label: String(v) });
+    }
+  }
+
+  // Area fill
+  const areaPath = `M${pts[0][0]},${mt+iH} ` + pts.map(([x,y])=>`L${x},${y}`).join(' ') + ` L${pts[N-1][0]},${mt+iH} Z`;
+  const linePath = pts.map(([x,y],i) => (i===0?`M${x},${y}`:`L${x},${y}`)).join(' ');
+
+  const xLabels = [];
+  // Show max ~6 x-labels to avoid crowding
+  const step = Math.max(1, Math.ceil(N / 6));
+  pts.forEach(([x,,, d], i) => {
+    if (i % step === 0 || i === N - 1) xLabels.push({ x, label: d.slice(5) }); // MM-DD
+  });
+
+  const axes = makeAxes(W, H, ml, mr, mt, mb, xLabels, yTicks, '');
+  const dots = pts.map(([x,y,v,d]) =>
+    `<circle cx="${x}" cy="${y}" r="4" fill="var(--blue)" stroke="white" stroke-width="2">
+       <title>${svgEsc(d)}: ${v} entr${v===1?'y':'ies'}</title>
+     </circle>`).join('');
+
+  const svg = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="display:block">
+    <defs>
+      <linearGradient id="trendGrad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="var(--blue)" stop-opacity="0.25"/>
+        <stop offset="100%" stop-color="var(--blue)" stop-opacity="0.02"/>
+      </linearGradient>
+    </defs>
+    ${axes}
+    <path d="${areaPath}" fill="url(#trendGrad)"/>
+    <path d="${linePath}" fill="none" stroke="var(--blue)" stroke-width="2.5" stroke-linejoin="round"/>
+    ${dots}
+  </svg>`;
+  document.getElementById('chart-trend').innerHTML = svg;
+}
+
+// ── Chart 4: Duration Histogram ───────────────────────────────────────────────
+function drawHistogram(entries, W) {
+  const durations = entries.map(e => e.duration || 0).filter(d => d > 0);
+  if (!durations.length) return;
+
+  const minD = Math.min(...durations);
+  const maxD = Math.max(...durations);
+
+  if (minD === maxD) {
+    document.getElementById('chart-hist').innerHTML =
+      `<div class="empty-state" style="padding:20px 0">All entries have identical duration (${secsToStr(minD)}) — no distribution to show.</div>`;
+    return;
+  }
+
+  // Sturges' rule for bin count, capped 5–15
+  const bins = Math.max(5, Math.min(15, Math.round(1 + Math.log2(durations.length))));
+  const binSize = (maxD - minD) / bins;
+
+  const counts = Array(bins).fill(0);
+  durations.forEach(d => {
+    let b = Math.floor((d - minD) / binSize);
+    if (b >= bins) b = bins - 1;
+    counts[b]++;
+  });
+
+  const maxCount = Math.max(...counts);
+  const ml = 46, mr = 16, mt = 20, mb = 54;
+  const H = 200;
+  const iW = W - ml - mr;
+  const iH = H - mt - mb;
+  const barW = iW / bins - 2;
+
+  const yTicks = yTicksFrac(maxCount, 4).map(t => ({ ...t, label: String(Math.round(t.frac * maxCount)) }));
+
+  let bars = '', xLabels = [];
+  counts.forEach((count, i) => {
+    const x = ml + (i / bins) * iW + 1;
+    const barH = (count / maxCount) * iH;
+    const y = mt + iH - barH;
+    const binStart = fmtTickVal(minD + i * binSize);
+    const binEnd = fmtTickVal(minD + (i + 1) * binSize);
+    bars += `<rect x="${x}" y="${y}" width="${barW}" height="${barH}" fill="var(--green)" rx="3" opacity="0.8">
+               <title>${binStart}–${binEnd}: ${count} entr${count===1?'y':'ies'}</title>
+             </rect>`;
+    if (i % Math.ceil(bins / 6) === 0 || i === bins - 1) {
+      xLabels.push({ x: x + barW / 2, label: binStart });
+    }
+  });
+
+  // Mean & std dev overlay
+  const mean = durations.reduce((s, d) => s + d, 0) / durations.length;
+  const stdDev = Math.sqrt(durations.reduce((s, d) => s + Math.pow(d - mean, 2), 0) / durations.length);
+  const meanX = ml + ((mean - minD) / (maxD - minD)) * iW;
+
+  const axes = makeAxes(W, H, ml, mr, mt, mb, xLabels, yTicks, '');
+  const svg = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="display:block">
+    ${axes}
+    ${bars}
+    <line x1="${meanX}" y1="${mt}" x2="${meanX}" y2="${mt+iH}" stroke="var(--amber)" stroke-width="2" stroke-dasharray="5,3"/>
+    <text x="${meanX+4}" y="${mt+12}" font-size="9" fill="var(--amber)" font-family="monospace">avg ${secsToStr(Math.round(mean))}</text>
+    <text x="${meanX+4}" y="${mt+23}" font-size="9" fill="var(--amber)" font-family="monospace">±${secsToStr(Math.round(stdDev))}</text>
+  </svg>`;
+  document.getElementById('chart-hist').innerHTML = svg;
+}
+
+// ===== SUMMARY TAB =====
+function getAutoAvg(study, act) {
+  const entries = (study.entries || []).filter(e => e.activity === act && !e.deletedAt);
+  if (!entries.length) return 0;
+  return Math.round(entries.reduce((s, e) => s + (e.duration || 0), 0) / entries.length);
+}
+
+function renderSummary() {
+  const study = currentStudy();
+  if (!study) { document.getElementById('content').innerHTML = '<div class="empty-state">No study selected.</div>'; return; }
+  const entries = study.entries.filter(e => !e.deletedAt);
+  const mode = db.settings.hourMode;
+
+  if (entries.length === 0) { document.getElementById('content').innerHTML = '<div class="empty-state">No entries in this study.</div>'; return; }
+
+  const totalEntries = entries.length;
+  const totalSecs = entries.reduce((s, e) => s + (e.duration || 0), 0);
+  const avgSecs = Math.round(totalSecs / totalEntries);
+  const longestSecs = Math.max(...entries.map(e => e.duration || 0));
+
+  // Group by activity
+  const actMap = {};
+  entries.forEach(e => {
+    if (!actMap[e.activity]) actMap[e.activity] = [];
+    actMap[e.activity].push(e);
+  });
+
+  let html = `
+  <div class="stat-grid">
+    <div class="stat-card"><div class="stat-label">Total Entries</div><div class="stat-value">${totalEntries}</div></div>
+    <div class="stat-card"><div class="stat-label">Total Time</div><div class="stat-value">${secsToStr(totalSecs)}</div></div>
+    <div class="stat-card"><div class="stat-label">Average</div><div class="stat-value">${secsToStr(avgSecs)}</div></div>
+    <div class="stat-card"><div class="stat-label">Longest</div><div class="stat-value">${secsToStr(longestSecs)}</div></div>
+  </div>`;
+
+  Object.keys(actMap).forEach(act => {
+    const items = actMap[act];
+    const count = items.length;
+    const total = items.reduce((s, e) => s + (e.duration || 0), 0);
+    const avg = Math.round(total / count);
+    const longest = Math.max(...items.map(e => e.duration || 0));
+    const shortest = Math.min(...items.map(e => e.duration || 0));
+    const exceptions = items.filter(e => e.exception).length;
+    const std = study.manualStd[act] || 0;
+    const isOpen = expandedAccordions[act];
+
+    html += `
+    <div class="activity-summary-row">
+      <div class="activity-summary-header" onclick="toggleAccordion('${esc(act)}')">
+        <div>
+          <div class="activity-summary-name">${esc(act)}</div>
+          <div class="activity-summary-stats">${count}× · ${secsToStr(total)} total · avg ${secsToStr(avg)}${std ? ' · std ' + secsToStr(std) : ''}</div>
+          <div class="activity-summary-stats">Longest ${secsToStr(longest)} · Shortest ${secsToStr(shortest)}${exceptions ? ' · ' + exceptions + ' exception(s)' : ''}</div>
+        </div>
+        <span class="chevron ${isOpen ? 'open' : ''}">▶</span>
+      </div>
+      <div class="activity-instances ${isOpen ? 'open' : ''}">
+        <table class="instance-table">
+          <thead><tr><th>#</th><th>Date</th><th>Start</th><th>End</th><th>Duration</th><th>Exc</th></tr></thead>
+          <tbody>
+            ${items.sort((a,b) => (b.startTs||0)-(a.startTs||0)).map((e, i) => `
+            <tr>
+              <td>${i+1}</td>
+              <td>${e.date}</td>
+              <td>${displayTime(e, 'start', mode)}</td>
+              <td>${displayTime(e, 'end', mode)}</td>
+              <td>${secsToStr(e.duration)}</td>
+              <td>${e.exception ? '⚠' : ''}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>`;
+  });
+
+  document.getElementById('content').innerHTML = html;
+}
+
+function toggleAccordion(act) {
+  expandedAccordions[act] = !expandedAccordions[act];
+  renderSummary();
+}
+
+// ===== NOTES TAB =====
+function renderNotes() {
+  const p = currentProfile();
+  const notes = p ? (p.notes || '') : '';
+
+  document.getElementById('content').innerHTML = `
+  <div class="card" style="display:flex;flex-direction:column;height:calc(100vh - 140px)">
+    <div class="card-title">Notes (${p ? p.name : 'Profile'})</div>
+    <textarea id="notes-area" style="flex:1;min-height:300px;resize:none;background:var(--surface2);" placeholder="Type notes here… auto-saved.">${esc(notes)}</textarea>
+    <div class="text-sm text-muted mt8" id="notes-saved" style="font-style:italic;"></div>
+  </div>`;
+
+  document.getElementById('notes-area').addEventListener('input', function() {
+    clearTimeout(notesDebounce);
+    notesDebounce = setTimeout(() => {
+      const p = currentProfile();
+      if (p) {
+        p.notes = this.value;
+        saveDb();
+        const el = document.getElementById('notes-saved');
+        if (el) el.textContent = 'Saved ' + nowTimeStr();
+      }
+    }, 500);
+  });
+}
+
+// ===== MANAGE TAB =====
+function renderManage() {
+  const study = currentStudy();
+  if (!study) { document.getElementById('content').innerHTML = '<div class="empty-state">No study selected.</div>'; return; }
+  const activities = study.activities || [];
+
+  let html = `
+  <div class="card">
+    <div class="card-title">Add Activity</div>
+    <div class="form-row">
+      <div class="form-group"><input id="manage-new-act" placeholder="Activity name" type="text"></div>
+      <div style="flex-shrink:0;display:flex;align-items:flex-end;">
+        <button class="btn btn-primary btn-sm" onclick="manageAddActivity()">+ Add</button>
+      </div>
+    </div>
+  </div>`;
+
+  if (activities.length === 0) {
+    html += `<div class="empty-state">No activities yet. Add one above.</div>`;
+  }
+
+  activities.forEach((act, i) => {
+    const entryCount = study.entries.filter(e => e.activity === act && !e.deletedAt).length;
+    const manualStd = study.manualStd[act] || 0;
+    const autoAvg = getAutoAvg(study, act);
+    html += `
+    <div class="card" style="padding:12px">
+      <div class="flex-between mb8">
+        <div style="flex:1;min-width:0;">
+          <input type="text" value="${esc(act)}" id="act-name-${i}" style="font-weight:bold;font-size:13px;">
+        </div>
+        <div style="display:flex;gap:5px;flex-shrink:0;margin-left:8px;">
+          <button class="btn btn-ghost btn-xs" onclick="manageRenameActivity(${i})">Rename</button>
+          <button class="btn btn-red btn-xs" onclick="manageDeleteActivity(${i})">Delete</button>
+        </div>
+      </div>
+      <div class="text-sm text-muted">${entryCount} entries</div>
+      <hr class="light">
+      <div class="card-title" style="margin-bottom:6px;">Standard Time</div>
+      <div class="form-row" style="align-items:flex-end;">
+        <div class="form-group">
+          <label>Manual (HH:MM:SS)</label>
+          <input type="time" step="1" id="std-${i}" value="${manualStd ? secsToHMSInput(manualStd) : ''}">
+        </div>
+        <div style="flex-shrink:0;display:flex;gap:4px;align-items:flex-end;">
+          <button class="btn btn-blue btn-xs" onclick="manageSetStd(${i}, '${esc(act)}')">Set</button>
+          ${autoAvg ? `<button class="btn btn-ghost btn-xs" onclick="manageUseAvg(${i}, '${esc(act)}', ${autoAvg})">Use Avg (${secsToStr(autoAvg)})</button>` : ''}
+        </div>
+      </div>
+      ${manualStd ? `<div class="text-sm mono" style="color:var(--blue)">Current: ${secsToStr(manualStd)}</div>` : ''}
+    </div>`;
+  });
+
+  document.getElementById('content').innerHTML = html;
+}
+
+function secsToHMSInput(n) {
+  n = Math.floor(n);
+  return `${pad(Math.floor(n/3600))}:${pad(Math.floor((n%3600)/60))}:${pad(n%60)}`;
+}
+
+function manageAddActivity() {
+  const inp = document.getElementById('manage-new-act');
+  const act = inp ? inp.value.trim() : '';
+  if (!act) return;
+  const study = currentStudy();
+  if (!study) return;
+  if (!study.activities.includes(act)) { study.activities.push(act); saveDb(); }
+  renderManage();
+}
+
+function manageRenameActivity(i) {
+  const inp = document.getElementById(`act-name-${i}`);
+  const study = currentStudy();
+  if (!study || !inp) return;
+  const oldName = study.activities[i];
+  const newName = inp.value.trim();
+  if (!newName || newName === oldName) return;
+  // Update all entries
+  study.entries.forEach(e => { if (e.activity === oldName) e.activity = newName; });
+  if (study.manualStd[oldName] !== undefined) {
+    study.manualStd[newName] = study.manualStd[oldName];
+    delete study.manualStd[oldName];
+  }
+  study.activities[i] = newName;
+  saveDb();
+  renderManage();
+}
+
+function manageDeleteActivity(i) {
+  const study = currentStudy();
+  if (!study) return;
+  const act = study.activities[i];
+  if (!confirm(`Delete activity "${act}" and all its entries?`)) return;
+  // Move entries to recycle bin
+  study.entries.filter(e => e.activity === act).forEach(e => {
+    e.deletedAt = Date.now();
+    e._studyId = study.id;
+    e._profileId = db.activeProfileId;
+    db.recyclebin.push(e);
+  });
+  study.entries = study.entries.filter(e => e.activity !== act);
+  study.activities.splice(i, 1);
+  delete study.manualStd[act];
+  saveDb();
+  renderManage();
+}
+
+function manageSetStd(i, act) {
+  const inp = document.getElementById(`std-${i}`);
+  const study = currentStudy();
+  if (!study || !inp) return;
+  const val = inp.value;
+  const secs = hmsToSecs(val);
+  study.manualStd[act] = secs;
+  saveDb();
+  renderManage();
+}
+
+function manageUseAvg(i, act, avg) {
+  const study = currentStudy();
+  if (!study) return;
+  study.manualStd[act] = avg;
+  saveDb();
+  renderManage();
+}
+
+// ===== STUDIES TAB =====
+function renderStudies() {
+  const p = currentProfile();
+  if (!p) { document.getElementById('content').innerHTML = '<div class="empty-state">No profile.</div>'; return; }
+  const studies = p.studies || [];
+
+  let html = `
+  <div class="card">
+    <div class="card-title">New Study</div>
+    <div class="form-row">
+      <div class="form-group"><label>Name</label><input id="new-study-name" type="text" placeholder="Study name"></div>
+      <div class="form-group" style="flex:0 0 130px"><label>Date</label><input id="new-study-date" type="date" value="${todayStr()}"></div>
+    </div>
+    <button class="btn btn-primary btn-sm mt8" onclick="addStudy()">+ Create</button>
+  </div>`;
+
+  studies.forEach(s => {
+    const isActive = s.id === p.activeStudyId;
+    const entryCount = s.entries.filter(e => !e.deletedAt).length;
+    html += `
+    <div class="study-item ${isActive ? 'active' : ''}" onclick="switchStudy('${s.id}')">
+      <div class="study-item-info">
+        <div class="study-item-name">${esc(s.name)} ${isActive ? '✓' : ''}</div>
+        <div class="study-item-meta">${s.date} · ${entryCount} entries</div>
+      </div>
+      <div style="display:flex;gap:4px;flex-shrink:0" onclick="event.stopPropagation()">
+        <button class="btn btn-ghost btn-xs" onclick="duplicateStudy('${s.id}')">⧉ Dup</button>
+        <button class="btn btn-red btn-xs" onclick="deleteStudy('${s.id}')">🗑</button>
+      </div>
+    </div>`;
+  });
+
+  document.getElementById('content').innerHTML = html;
+}
+
+function addStudy() {
+  const name = document.getElementById('new-study-name').value.trim();
+  const date = document.getElementById('new-study-date').value || todayStr();
+  if (!name) { alert('Enter a study name.'); return; }
+  const p = currentProfile();
+  if (!p) return;
+  const id = generateId();
+  p.studies.push({ id, name, date, activities: [], entries: [], manualStd: {} });
+  p.activeStudyId = id;
+  saveDb();
+  renderStudies();
+  updateTopBar();
+}
+
+function switchStudy(id) {
+  const p = currentProfile();
+  if (!p) return;
+  p.activeStudyId = id;
+  saveDb();
+  renderStudies();
+  updateTopBar();
+}
+
+function deleteStudy(id) {
+  const p = currentProfile();
+  if (!p) return;
+  const study = p.studies.find(s => s.id === id);
+  if (!study) return;
+  if (!confirm(`Delete study "${study.name}"?`)) return;
+  study.entries.forEach(e => {
+    e.deletedAt = Date.now();
+    e._studyId = id;
+    e._profileId = db.activeProfileId;
+    db.recyclebin.push(e);
+  });
+  p.studies = p.studies.filter(s => s.id !== id);
+  if (p.activeStudyId === id) p.activeStudyId = p.studies[0] && p.studies[0].id;
+  saveDb();
+  renderStudies();
+  updateTopBar();
+}
+
+function duplicateStudy(id) {
+  const p = currentProfile();
+  if (!p) return;
+  const src = p.studies.find(s => s.id === id);
+  if (!src) return;
+  const newId = generateId();
+  p.studies.push({
+    id: newId,
+    name: src.name + ' (copy)',
+    date: todayStr(),
+    activities: [...src.activities],
+    entries: [],
+    manualStd: { ...src.manualStd }
+  });
+  saveDb();
+  renderStudies();
+}
+
+// ===== SETTINGS TAB =====
+function renderSettings() {
+  const mode = db.settings.hourMode;
+  const binCount = db.recyclebin.length;
+  const study = currentStudy();
+
+  document.getElementById('content').innerHTML = `
+  <div class="card">
+    <div class="card-title">Display</div>
+    <div class="toggle-wrap">
+      <label class="toggle">
+        <input type="checkbox" ${mode === '24' ? 'checked' : ''} onchange="toggleHourMode(this.checked)">
+        <span class="toggle-slider"></span>
+      </label>
+      <span class="toggle-label">24-Hour Mode ${mode === '24' ? '(on)' : '(off)'}</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Profiles</div>
+    <div id="settings-profiles-list"></div>
+    <div class="form-row mt8">
+      <div class="form-group"><input id="new-profile-name" placeholder="New profile name" type="text"></div>
+      <div style="flex-shrink:0;display:flex;align-items:flex-end;">
+        <button class="btn btn-primary btn-sm" onclick="createProfile()">+ Create</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Recycle Bin</div>
+    <div class="flex-between">
+      <span class="text-sm text-muted">${binCount} item(s)</span>
+      <button class="btn btn-ghost btn-sm" onclick="openBinModal()">View Bin</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Data</div>
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      <button class="btn btn-blue btn-full" onclick="exportCsv()">⬇ Export CSV</button>
+      <button class="btn btn-blue btn-full" onclick="exportXlsx()">⬇ Export XLSX</button>
+      <button class="btn btn-ghost btn-full" onclick="exportJson()">⬇ Backup (JSON)</button>
+      <label class="btn btn-ghost btn-full" style="cursor:pointer;">
+        ⬆ Import Backup (JSON)
+        <input type="file" accept=".json" style="display:none" onchange="importJson(this)">
+      </label>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title" style="color:var(--text3)">About</div>
+    <div class="text-sm text-muted">Time Study App V2 · Single-file HTML · localStorage persistence</div>
+  </div>`;
+
+  renderSettingsProfiles();
+}
+
+function renderSettingsProfiles() {
+  const el = document.getElementById('settings-profiles-list');
+  if (!el) return;
+  el.innerHTML = db.profiles.map(p => `
+  <div class="profile-item ${p.id === db.activeProfileId ? 'active' : ''}">
+    <div class="profile-item-name">${esc(p.name)}${p.id === db.activeProfileId ? ' ✓' : ''}</div>
+    <div style="display:flex;gap:4px;">
+      ${p.id !== db.activeProfileId ? `<button class="btn btn-ghost btn-xs" onclick="switchProfile('${p.id}')">Switch</button>` : ''}
+      <button class="btn btn-ghost btn-xs" onclick="renameProfile('${p.id}')">Rename</button>
+      ${db.profiles.length > 1 ? `<button class="btn btn-red btn-xs" onclick="deleteProfile('${p.id}')">Delete</button>` : ''}
+    </div>
+  </div>`).join('');
+}
+
+function toggleHourMode(is24) {
+  db.settings.hourMode = is24 ? '24' : '12';
+  saveDb();
+  renderSettings();
+}
+
+function createProfile() {
+  const name = document.getElementById('new-profile-name').value.trim();
+  if (!name) { alert('Enter profile name.'); return; }
+  const studyId = generateId();
+  const id = generateId();
+  db.profiles.push({
+    id, name,
+    createdAt: new Date().toISOString(),
+    studies: [{ id: studyId, name: 'Study 1', date: todayStr(), activities: [], entries: [], manualStd: {} }],
+    activeStudyId: studyId,
+    notes: ''
+  });
+  db.activeProfileId = id;
+  saveDb();
+  renderSettings();
+  updateTopBar();
+}
+
+function switchProfile(id) {
+  db.activeProfileId = id;
+  saveDb();
+  render();
+}
+
+function renameProfile(id) {
+  const p = db.profiles.find(p => p.id === id);
+  if (!p) return;
+  const name = prompt('New profile name:', p.name);
+  if (name && name.trim()) { p.name = name.trim(); saveDb(); renderSettings(); updateTopBar(); }
+}
+
+function deleteProfile(id) {
+  const p = db.profiles.find(p => p.id === id);
+  if (!p) return;
+  if (!confirm(`Delete profile "${p.name}" and all its data?`)) return;
+  db.profiles = db.profiles.filter(p => p.id !== id);
+  db.recyclebin = db.recyclebin.filter(e => e._profileId !== id);
+  if (db.activeProfileId === id) db.activeProfileId = db.profiles[0] && db.profiles[0].id;
+  saveDb();
+  renderSettings();
+  updateTopBar();
+}
+
+// ===== PROFILE MODAL =====
+function openProfileModal() {
+  const el = document.getElementById('profile-modal-list');
+  el.innerHTML = db.profiles.map(p => `
+  <div class="profile-item ${p.id === db.activeProfileId ? 'active' : ''}" style="cursor:pointer;" onclick="switchProfileModal('${p.id}')">
+    <div class="profile-item-name">${esc(p.name)}</div>
+    ${p.id === db.activeProfileId ? '<span class="badge badge-green">Active</span>' : ''}
+  </div>`).join('');
+  openModal('profile-modal');
+}
+
+function switchProfileModal(id) {
+  db.activeProfileId = id;
+  saveDb();
+  closeModal('profile-modal');
+  render();
+}
+
+// ===== RECYCLE BIN MODAL =====
+function openBinModal() {
+  renderBinModal();
+  openModal('bin-modal');
+}
+
+function renderBinModal() {
+  const el = document.getElementById('bin-modal-list');
+  if (!el) return;
+  if (db.recyclebin.length === 0) {
+    el.innerHTML = '<div class="empty-state">Recycle bin is empty.</div>';
+    return;
+  }
+  el.innerHTML = `<button class="btn btn-red btn-sm btn-full mb8" onclick="binClearAll()">🗑 Permanently Delete All</button>` +
+    db.recyclebin.slice().reverse().map(e => `
+  <div class="bin-entry">
+    <div class="bin-entry-info">
+      <div class="bin-entry-name">${esc(e.activity)}</div>
+      <div class="bin-entry-meta">${e.date} · ${secsToStr(e.duration)} · deleted ${new Date(e.deletedAt).toLocaleDateString()}</div>
+      ${e.note ? `<div style="font-size:11px;color:var(--text3)">${esc(e.note)}</div>` : ''}
+    </div>
+    <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;">
+      <button class="btn btn-green btn-xs" onclick="binRestore(${e.id})">Restore</button>
+      <button class="btn btn-red btn-xs" onclick="binDelete(${e.id})">Delete</button>
+    </div>
+  </div>`).join('');
+}
+
+function binRestore(id) {
+  const idx = db.recyclebin.findIndex(e => e.id === id);
+  if (idx === -1) return;
+  const entry = db.recyclebin.splice(idx, 1)[0];
+  // Find the study it came from
+  const profileId = entry._profileId || db.activeProfileId;
+  const studyId = entry._studyId;
+  const profile = db.profiles.find(p => p.id === profileId) || currentProfile();
+  if (!profile) { alert('Cannot find original profile.'); return; }
+  const study = profile.studies.find(s => s.id === studyId) || profile.studies[0];
+  if (!study) { alert('Cannot find original study.'); return; }
+  entry.deletedAt = null;
+  study.entries.push(entry);
+  saveDb();
+  renderBinModal();
+}
+
+function binDelete(id) {
+  if (!confirm('Permanently delete this entry?')) return;
+  db.recyclebin = db.recyclebin.filter(e => e.id !== id);
+  saveDb();
+  renderBinModal();
+}
+
+function binClearAll() {
+  if (!confirm('Permanently delete ALL entries in the bin?')) return;
+  db.recyclebin = [];
+  saveDb();
+  renderBinModal();
+}
+
+// ===== EXPORT =====
+function exportCsv() {
+  const study = currentStudy();
+  if (!study) { alert('No active study.'); return; }
+  const mode = db.settings.hourMode;
+  const rows = [['Date','Activity','Start','End','Duration','Secs','Exception','Note']];
+  study.entries.filter(e => !e.deletedAt).forEach(e => {
+    rows.push([
+      e.date,
+      e.activity,
+      displayTime(e, 'start', mode),
+      displayTime(e, 'end', mode),
+      secsToStr(e.duration),
+      e.duration,
+      e.exception ? 'Yes' : 'No',
+      e.note || ''
+    ]);
+  });
+  const csv = '\uFEFF' + rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\r\n');
+  downloadBlob(csv, `${study.name}_${todayStr()}.csv`, 'text/csv;charset=utf-8');
+}
+
+function exportXlsx() {
+  try {
+    const study = currentStudy();
+    if (!study) { alert('No active study.'); return; }
+    const mode = db.settings.hourMode;
+    const rows = [['Date','Activity','Start','End','Duration','Secs','Exception','Note']];
+    study.entries.filter(e => !e.deletedAt).forEach(e => {
+      rows.push([e.date, e.activity, displayTime(e, 'start', mode), displayTime(e, 'end', mode), secsToStr(e.duration), e.duration, e.exception ? 'Yes' : 'No', e.note || '']);
+    });
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Data');
+    XLSX.writeFile(wb, `${study.name}_${todayStr()}.xlsx`);
+  } catch(e) { alert('XLSX export failed. Try CSV instead.'); }
+}
+
+function exportJson() {
+  const json = JSON.stringify(db, null, 2);
+  downloadBlob(json, `TimeStudy_backup_${todayStr()}.json`, 'application/json');
+}
+
+function importJson(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const imported = JSON.parse(e.target.result);
+      if (!imported.profiles || !imported.settings) throw new Error('Invalid backup');
+      if (!confirm('Replace ALL current data with this backup?')) return;
+      db = imported;
+      saveDb();
+      render();
+      showNotice('Data imported successfully!');
+    } catch(ex) {
+      alert('Invalid backup file: ' + ex.message);
+    }
+  };
+  reader.readAsText(file);
+  input.value = '';
+}
+
+function downloadBlob(content, filename, type) {
+  const blob = new Blob([content], { type });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+// ===== MODAL HELPERS =====
+function openModal(id) {
+  document.getElementById(id).classList.add('open');
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+
+// Close modals on overlay click
+document.querySelectorAll('.modal-overlay').forEach(el => {
+  el.addEventListener('click', function(e) {
+    if (e.target === this) this.classList.remove('open');
+  });
+});
+
+// ===== NOTICE =====
+let noticeTimeout = null;
+function showNotice(msg, type) {
+  const existing = document.getElementById('_notice');
+  if (existing) existing.remove();
+  const div = document.createElement('div');
+  div.id = '_notice';
+  div.className = 'notice ' + (type === 'amber' ? 'notice-amber' : '');
+  div.textContent = msg;
+  const topOffset = isDesktop() ? '80px' : '72px';
+  div.style.cssText = `position:fixed;top:${topOffset};left:50%;transform:translateX(-50%);z-index:999;max-width:420px;width:90%;box-shadow:0 4px 16px rgba(0,0,0,0.12);`;
+  document.body.appendChild(div);
+  clearTimeout(noticeTimeout);
+  noticeTimeout = setTimeout(() => div.remove(), 3000);
+}
+
+// ===== ESCAPE HELPER =====
+function esc(str) {
+  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+// ===== RESPONSIVE HELPERS =====
+function isDesktop() { return window.innerWidth >= 900; }
+
+// Re-render on resize so layouts (e.g. stat-grid columns) update
+let resizeDebounce = null;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeDebounce);
+  resizeDebounce = setTimeout(() => render(), 120);
+});
+
+// ===== INIT =====
+loadDb();
+
+// Deep-link hash routing (for PWA shortcuts)
+(function() {
+  const hash = location.hash.replace('#', '');
+  const validTabs = ['live','manual','log','summary','charts','notes','manage','studies','settings'];
+  if (hash && validTabs.includes(hash)) activeTab = hash;
+})();
+
+render();
+if (activeSessions.length > 0) startTimerInterval();
+
+// ===== SERVICE WORKER =====
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js', { scope: './' })
+      .then(reg => {
+        console.log('[PWA] Service worker registered:', reg.scope);
+
+        // Listen for a new SW waiting to activate
+        reg.addEventListener('updatefound', () => {
+          const newWorker = reg.installing;
+          newWorker.addEventListener('statechange', () => {
+            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+              showUpdateBanner(reg);
+            }
+          });
+        });
+      })
+      .catch(err => console.warn('[PWA] SW registration failed:', err));
+
+    // If a new SW just took control, reload cleanly
+    let refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!refreshing) { refreshing = true; location.reload(); }
+    });
+  });
+}
+
+function showUpdateBanner(reg) {
+  const existing = document.getElementById('_update-banner');
+  if (existing) return;
+  const div = document.createElement('div');
+  div.id = '_update-banner';
+  div.style.cssText = `
+    position:fixed; bottom:0; left:0; right:0; z-index:9999;
+    background:#1a1916; color:#f5f4f0;
+    padding:12px 16px; display:flex; align-items:center;
+    justify-content:space-between; gap:12px;
+    font-family:Georgia,serif; font-size:13px;
+    box-shadow:0 -2px 12px rgba(0,0,0,0.3);
+  `;
+  div.innerHTML = `
+    <span>🔄 A new version is available.</span>
+    <div style="display:flex;gap:8px">
+      <button onclick="document.getElementById('_update-banner').remove()"
+        style="background:transparent;border:1px solid rgba(255,255,255,0.3);color:#f5f4f0;
+               padding:5px 12px;border-radius:6px;cursor:pointer;font-family:Georgia,serif;">
+        Later
+      </button>
+      <button onclick="swUpdate()"
+        style="background:#1a6b3a;border:none;color:#fff;
+               padding:5px 12px;border-radius:6px;cursor:pointer;font-family:Georgia,serif;font-weight:bold;">
+        Update
+      </button>
+    </div>`;
+  document.body.appendChild(div);
+  window._swReg = reg;
+}
+
+function swUpdate() {
+  const banner = document.getElementById('_update-banner');
+  if (banner) banner.remove();
+  if (window._swReg && window._swReg.waiting) {
+    window._swReg.waiting.postMessage({ type: 'SKIP_WAITING' });
+  }
+}
+
+// ===== ONLINE / OFFLINE INDICATOR =====
+function updateOnlineStatus() {
+  const existing = document.getElementById('_offline-bar');
+  if (navigator.onLine) {
+    if (existing) existing.remove();
+  } else {
+    if (existing) return;
+    const bar = document.createElement('div');
+    bar.id = '_offline-bar';
+    bar.style.cssText = `
+      position:fixed; top:0; left:0; right:0; z-index:10000;
+      background:#8a5a00; color:#fff; text-align:center;
+      padding:5px 12px; font-size:12px; font-family:Georgia,serif;
+    `;
+    bar.textContent = '📶 You are offline — the app is fully functional, data is saved locally.';
+    document.body.appendChild(bar);
+  }
+}
+window.addEventListener('online', updateOnlineStatus);
+window.addEventListener('offline', updateOnlineStatus);
+updateOnlineStatus();
+
+</script>
+</body>
+</html>
