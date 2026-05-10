@@ -6,7 +6,7 @@ A single-file, offline-first industrial time study app — built with plain HTML
 
 ## Live App
 
-**[Open Time Study V2 →]([https://your-username.github.io/your-repo-name/TimeStudyApp_V2.html](https://rienscarlet.github.io/TimeStudyApp/TimeStudyApp_V2.html))**
+**[Open Time Study V2 →](https://rienscarlet.github.io/TimeStudyApp/TimeStudyApp_V2.html)**
 
 ---
 
