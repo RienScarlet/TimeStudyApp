@@ -142,6 +142,12 @@ npx serve .
 
 ---
 
+## Built With AI
+
+This app was designed and built with the assistance of Claude by Anthropic. All features, bug fixes, and improvements — including the offline caching strategy, dark mode, image compression, and Android keyboard handling — were developed through an iterative conversation with Claude.
+
+---
+
 ## License
 
 MIT — do whatever you like with it.
