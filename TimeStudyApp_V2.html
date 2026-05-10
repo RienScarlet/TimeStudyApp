@@ -1076,7 +1076,7 @@ function checkStorage() {
   try {
     const bytes = new Blob([localStorage.getItem('timeStudyDb_v2') || '']).size;
     const warn = document.getElementById('storage-warn');
-    if (warn) warn.style.display = bytes > 4 * 1024 * 1024 ? 'block' : 'none';
+    if (warn) warn.style.display = bytes > 7 * 1024 * 1024 ? 'block' : 'none';
   } catch(e) {}
 }
 
@@ -1478,27 +1478,64 @@ function imgId() {
 }
 
 // Trigger file/camera input for a session
+// ===== IMAGE COMPRESSION =====
+// Resizes and re-encodes any image to JPEG before storing in localStorage.
+// Max dimension 1024px, quality 0.82 — reduces a typical phone photo
+// from ~5 MB raw to ~150–300 KB, allowing 15–30+ images before hitting limits.
+function compressImage(file, callback) {
+  const MAX_DIM = 1024;
+  const QUALITY = 0.82;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const img = new Image();
+    img.onload = () => {
+      let { width, height } = img;
+      // Scale down only — never upscale small images
+      if (width > MAX_DIM || height > MAX_DIM) {
+        if (width >= height) { height = Math.round(height * MAX_DIM / width); width = MAX_DIM; }
+        else                 { width = Math.round(width * MAX_DIM / height);  height = MAX_DIM; }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width  = width;
+      canvas.height = height;
+      canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+      callback(canvas.toDataURL('image/jpeg', QUALITY));
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+// Compress multiple files in parallel, preserve order, then call done(dataUrls[])
+function compressAll(files, done) {
+  const results = new Array(files.length);
+  let remaining = files.length;
+  if (remaining === 0) { done([]); return; }
+  files.forEach((file, i) => {
+    compressImage(file, dataUrl => {
+      results[i] = dataUrl;
+      if (--remaining === 0) done(results);
+    });
+  });
+}
+
 function sessionAddImage(sessionId) {
   const inp = document.createElement('input');
   inp.type = 'file';
   inp.accept = 'image/*';
-  inp.capture = 'environment'; // prefer back camera on mobile
+  inp.capture = 'environment';
   inp.multiple = true;
   inp.style.display = 'none';
   document.body.appendChild(inp);
   inp.onchange = () => {
     const files = Array.from(inp.files || []);
-    let loaded = 0;
-    files.forEach(file => {
-      const reader = new FileReader();
-      reader.onload = ev => {
-        sessionImgs(sessionId).push({ id: imgId(), dataUrl: ev.target.result, caption: '', ts: Date.now() });
-        loaded++;
-        if (loaded === files.length) renderLive();
-      };
-      reader.readAsDataURL(file);
-    });
     document.body.removeChild(inp);
+    compressAll(files, dataUrls => {
+      dataUrls.forEach(dataUrl => {
+        sessionImgs(sessionId).push({ id: imgId(), dataUrl, caption: '', ts: Date.now() });
+      });
+      renderLive();
+    });
   };
   inp.click();
 }
@@ -1518,17 +1555,14 @@ function entryAddImage(entryId) {
     if (!entry) { document.body.removeChild(inp); return; }
     if (!entry.images) entry.images = [];
     const files = Array.from(inp.files || []);
-    let loaded = 0;
-    files.forEach(file => {
-      const reader = new FileReader();
-      reader.onload = ev => {
-        entry.images.push({ id: imgId(), dataUrl: ev.target.result, caption: '', ts: Date.now() });
-        loaded++;
-        if (loaded === files.length) { saveDb(); renderLog(); }
-      };
-      reader.readAsDataURL(file);
-    });
     document.body.removeChild(inp);
+    compressAll(files, dataUrls => {
+      dataUrls.forEach(dataUrl => {
+        entry.images.push({ id: imgId(), dataUrl, caption: '', ts: Date.now() });
+      });
+      saveDb();
+      renderLog();
+    });
   };
   inp.click();
 }
@@ -1761,17 +1795,13 @@ function manAddImage() {
   document.body.appendChild(inp);
   inp.onchange = () => {
     const files = Array.from(inp.files || []);
-    let loaded = 0;
-    files.forEach(file => {
-      const reader = new FileReader();
-      reader.onload = ev => {
-        manImages.push({ id: imgId(), dataUrl: ev.target.result, caption: '', ts: Date.now() });
-        loaded++;
-        if (loaded === files.length) renderManImgStrip();
-      };
-      reader.readAsDataURL(file);
-    });
     document.body.removeChild(inp);
+    compressAll(files, dataUrls => {
+      dataUrls.forEach(dataUrl => {
+        manImages.push({ id: imgId(), dataUrl, caption: '', ts: Date.now() });
+      });
+      renderManImgStrip();
+    });
   };
   inp.click();
 }
