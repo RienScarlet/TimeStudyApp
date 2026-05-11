@@ -839,6 +839,165 @@
     font-weight: bold;
   }
 
+  /* NOTES FAB — floating action button, always visible bottom-left */
+  .notes-fab {
+    position: fixed;
+    bottom: calc(var(--tab-h) + 16px);
+    left: 16px;
+    z-index: 500;
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text2);
+    font-size: 20px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.25);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s, transform 0.15s;
+  }
+  .notes-fab:hover  { background: var(--border); transform: scale(1.08); }
+  .notes-fab:active { transform: scale(0.95); }
+
+  /* Slide-up notes panel */
+  .notes-panel {
+    position: fixed;
+    bottom: calc(var(--tab-h));
+    left: 0; right: 0;
+    z-index: 499;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -4px 24px rgba(0,0,0,0.18);
+    display: flex;
+    flex-direction: column;
+    height: 55vh;
+    transform: translateY(110%);
+    visibility: hidden;
+    pointer-events: none;
+    transition: transform 0.28s cubic-bezier(0.4,0,0.2,1),
+                visibility 0s linear 0.28s;
+    padding: 0;
+  }
+  .notes-panel.open {
+    transform: translateY(0);
+    visibility: visible;
+    pointer-events: auto;
+    transition: transform 0.28s cubic-bezier(0.4,0,0.2,1),
+                visibility 0s linear 0s;
+  }
+  .notes-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px 8px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .notes-panel-title {
+    font-size: 13px;
+    font-weight: bold;
+    color: var(--text2);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .notes-panel-close {
+    background: none;
+    border: none;
+    color: var(--text2);
+    font-size: 18px;
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+  .notes-panel-close:hover { background: var(--border); color: var(--text); }
+  .notes-panel textarea {
+    flex: 1;
+    resize: none;
+    border: none;
+    outline: none;
+    background: transparent;
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 14px;
+    padding: 12px 16px;
+    line-height: 1.5;
+  }
+  .notes-panel-footer {
+    padding: 6px 16px 10px;
+    font-size: 11px;
+    color: var(--text3);
+    font-style: italic;
+    flex-shrink: 0;
+  }
+  @media (min-width: 900px) {
+    .notes-fab  { bottom: 24px; left: 24px; }
+    .notes-panel {
+      bottom: 0;
+      left: auto; right: 24px;
+      width: 360px;
+      border-radius: 12px 12px 0 0;
+      height: 60vh;
+    }
+  }
+
+  /* RECYCLE BIN FAB — floating action button on Log tab */
+  .bin-fab {
+    position: fixed;
+    bottom: calc(var(--tab-h) + 16px);
+    right: 16px;
+    z-index: 500;
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    border: none;
+    background: var(--surface2);
+    color: var(--text2);
+    font-size: 20px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.25);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s, transform 0.15s;
+    border: 1px solid var(--border);
+  }
+  .bin-fab:hover  { background: var(--border); transform: scale(1.08); }
+  .bin-fab:active { transform: scale(0.95); }
+  .bin-fab-wrap {
+    position: fixed;
+    bottom: calc(var(--tab-h) + 16px);
+    right: 16px;
+    z-index: 500;
+  }
+  .bin-fab-badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    background: var(--red);
+    color: #fff;
+    font-size: 10px;
+    font-weight: bold;
+    min-width: 18px;
+    height: 18px;
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px;
+    pointer-events: none;
+  }
+  /* On desktop the tab bar is a sidebar — anchor FAB to bottom-right of viewport */
+  @media (min-width: 900px) {
+    .bin-fab-wrap {
+      bottom: 24px;
+      right: 24px;
+    }
+  }
+
   /* MAIN LAYOUT — mobile: simple column, desktop: sidebar grid (defined above) */
   #main-layout {
     display: flex;
@@ -922,6 +1081,18 @@
 </div>
 
 <!-- Recycle Bin Modal -->
+<!-- ── NOTES FAB — always-visible quick-access notes button ─────────────── -->
+<button class="notes-fab" id="notes-fab" onclick="toggleNotesPanel()" title="Quick Notes">📝</button>
+
+<div class="notes-panel" id="notes-panel">
+  <div class="notes-panel-header">
+    <span class="notes-panel-title">📝 Notes</span>
+    <button class="notes-panel-close" onclick="_closeNotesPanel()" title="Close">✕</button>
+  </div>
+  <textarea id="notes-panel-ta" placeholder="Type notes here… auto-saved." oninput="_notesPanelInput()"></textarea>
+  <div class="notes-panel-footer" id="notes-panel-saved"></div>
+</div>
+
 <div class="modal-overlay" id="bin-modal">
   <div class="modal-sheet">
     <div class="modal-title">🗑 Recycle Bin <button class="modal-close" onclick="closeModal('bin-modal')">✕</button></div>
@@ -998,7 +1169,8 @@ function defaultDb() {
         date: todayStr(),
         activities: [],
         entries: [],
-        manualStd: {}
+        manualStd: {},
+        quickAddPinned: null   // null = show all eligible; array = user-selected subset
       }],
       activeStudyId: studyId,
       notes: ''
@@ -1037,7 +1209,8 @@ function loadDb() {
             endTs: e.endTs || Date.now(),
             deletedAt: null
           })),
-          manualStd: s.manualStd || {}
+          manualStd: s.manualStd || {},
+          quickAddPinned: s.quickAddPinned || null
         })),
         activeStudyId: v1.activeStudyId || (v1.studies && v1.studies[0] && v1.studies[0].id) || generateId(),
         notes: ''
@@ -1063,6 +1236,10 @@ function loadDb() {
   db.recyclebin = (db.recyclebin || []).filter(e => !e.deletedAt || e.deletedAt > cutoff);
   // Migrate theme field for existing users who have no theme key yet
   if (!db.settings.theme) db.settings.theme = 'device';
+  // Migrate quickAddPinned for existing studies
+  db.profiles.forEach(p => p.studies.forEach(s => {
+    if (!('quickAddPinned' in s)) s.quickAddPinned = null;
+  }));
   applyTheme();
   saveDb();
 }
@@ -1276,9 +1453,70 @@ function discardSession(id) {
   renderLive();
 }
 
+function toggleQuickAddEdit() {
+  const panel = document.getElementById('qa-edit-panel');
+  const btn   = document.getElementById('qa-edit-btn');
+  if (!panel) return;
+  const open = panel.style.display === 'none';
+  panel.style.display = open ? 'block' : 'none';
+  btn.textContent = open ? '✕ Done' : '⚙ Edit';
+}
+
+function toggleQuickAddPin(activityName, checked) {
+  const study = currentStudy();
+  if (!study) return;
+  const allEligible = study.activities.filter(a => study.manualStd[a] || getAutoAvg(study, a));
+
+  // Start from current pinned state (null = all checked)
+  let pinned = study.quickAddPinned === null
+    ? [...allEligible]
+    : [...study.quickAddPinned];
+
+  if (checked) {
+    if (!pinned.includes(activityName)) pinned.push(activityName);
+  } else {
+    pinned = pinned.filter(a => a !== activityName);
+  }
+
+  // If every eligible activity is checked, revert to null (show all)
+  study.quickAddPinned = pinned.length === allEligible.length ? null : pinned;
+  saveDb();
+  // Don't re-render the whole tab — just update the visible buttons
+  _refreshQuickAddButtons();
+}
+
+function resetQuickAddPins() {
+  const study = currentStudy();
+  if (!study) return;
+  study.quickAddPinned = null;
+  saveDb();
+  // Reset all checkboxes to checked
+  document.querySelectorAll('#qa-checklist input[type="checkbox"]')
+    .forEach(cb => { cb.checked = true; });
+  _refreshQuickAddButtons();
+}
+
+function _refreshQuickAddButtons() {
+  // Rebuild only the visible buttons row without closing the edit panel
+  const study = currentStudy();
+  if (!study) return;
+  const p = currentProfile();
+  if (!p) return;
+  const allEligible = study.activities.filter(a => study.manualStd[a] || getAutoAvg(study, a));
+  const pinned = study.quickAddPinned;
+  const visible = pinned === null ? allEligible : allEligible.filter(a => pinned.includes(a));
+  const container = document.querySelector('#qa-edit-panel + div');
+  if (!container) return;
+  container.innerHTML = visible.length > 0
+    ? visible.map(a => {
+        const std = study.manualStd[a] || getAutoAvg(study, a);
+        return `<button class="btn btn-ghost btn-sm" onclick="quickAddEntry('${esc(a)}')">${esc(a)} <span class="badge badge-blue">${secsToStr(std)}</span></button>`;
+      }).join('')
+    : `<span style="font-size:13px;color:var(--text3);">No activities selected — tap ⚙ Edit to choose.</span>`;
+}
+
 function quickAddEntry(activityName) {
   const study = currentStudy();
-  if (!study) { alert('No active study.'); return; }
   const std = study.manualStd[activityName] || getAutoAvg(study, activityName);
   if (!std) return;
   const endTs = Date.now();
@@ -1307,6 +1545,12 @@ function quickAddEntry(activityName) {
 // ===== TAB SWITCHING =====
 function switchTab(tab) {
   activeTab = tab;
+  // Remove Log tab FAB when leaving the log
+  const fab = document.getElementById('bin-fab-wrap');
+  if (fab) fab.remove();
+  // Close notes panel when switching tabs; update FAB visibility
+  _closeNotesPanel();
+  _updateNotesFabVisibility();
   document.querySelectorAll('.tab-btn').forEach((b, i) => {
     const tabs = ['live','manual','log','summary','charts','notes','manage','studies','settings'];
     b.classList.toggle('active', tabs[i] === tab);
@@ -1316,6 +1560,7 @@ function switchTab(tab) {
 
 function render() {
   updateTopBar();
+  _updateNotesFabVisibility();
   const tabs = {
     live: renderLive,
     manual: renderManual,
@@ -1371,13 +1616,47 @@ function renderLive() {
   // Quick-add for activities with standard times
   const quickAdds = activities.filter(a => study && (study.manualStd[a] || getAutoAvg(study, a)));
   if (quickAdds.length > 0) {
-    html += `<div class="card"><div class="card-title">Quick Add (Standard Time)</div><div style="display:flex;flex-wrap:wrap;gap:6px;">`;
-    quickAdds.forEach(a => {
-      const std = study.manualStd[a] || getAutoAvg(study, a);
-      html += `<button class="btn btn-ghost btn-sm" onclick="quickAddEntry('${esc(a)}')">${esc(a)} <span class="badge badge-blue">${secsToStr(std)}</span></button>`;
-    });
-    html += `</div></div>`;
-  }
+    // null means show all; array means show only pinned (that still have a std time)
+    const pinned = study.quickAddPinned;
+    const visible = pinned === null
+      ? quickAdds
+      : quickAdds.filter(a => pinned.includes(a));
+
+    html += `<div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <div class="card-title" style="margin:0;">Quick Add (Standard Time)</div>
+        <button class="btn btn-ghost btn-sm" onclick="toggleQuickAddEdit()" id="qa-edit-btn"
+          style="font-size:11px;padding:3px 9px;">⚙ Edit</button>
+      </div>
+
+      <div id="qa-edit-panel" style="display:none;margin-bottom:10px;">
+        <div style="font-size:12px;color:var(--text2);margin-bottom:6px;">Select which activities appear here:</div>
+        <div style="display:flex;flex-direction:column;gap:4px;" id="qa-checklist">
+          ${quickAdds.map(a => {
+            const checked = pinned === null || pinned.includes(a);
+            const std = study.manualStd[a] || getAutoAvg(study, a);
+            return `<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;">
+              <input type="checkbox" ${checked ? 'checked' : ''} onchange="toggleQuickAddPin('${esc(a)}',this.checked)"
+                style="width:16px;height:16px;cursor:pointer;">
+              <span>${esc(a)}</span>
+              <span class="badge badge-blue" style="margin-left:auto;">${secsToStr(std)}</span>
+            </label>`;
+          }).join('')}
+        </div>
+        <button class="btn btn-ghost btn-sm" style="margin-top:8px;font-size:11px;" onclick="resetQuickAddPins()">Reset to All</button>
+      </div>
+
+      <div style="display:flex;flex-wrap:wrap;gap:6px;">
+        ${visible.length > 0
+          ? visible.map(a => {
+              const std = study.manualStd[a] || getAutoAvg(study, a);
+              return `<button class="btn btn-ghost btn-sm" onclick="quickAddEntry('${esc(a)}')">${esc(a)} <span class="badge badge-blue">${secsToStr(std)}</span></button>`;
+            }).join('')
+          : `<span style="font-size:13px;color:var(--text3);">No activities selected — tap ⚙ Edit to choose.</span>`
+        }
+      </div>
+    </div>`;
+  } // end if (quickAdds.length > 0)
 
   if (activeSessions.length === 0) {
     html += `<div class="empty-state">No active sessions.<br>Start a timer above.</div>`;
@@ -1945,19 +2224,29 @@ function renderLog() {
       const timeRange = `${displayTime(e, 'start', mode)} → ${displayTime(e, 'end', mode)}`;
       const imgCount = (e.images || []).length;
       html += `
-      <div class="entry-row" style="flex-direction:column;align-items:stretch;">
+      <div class="entry-row" id="entry-row-${e.id}" style="flex-direction:column;align-items:stretch;">
         <div style="display:flex;align-items:flex-start;gap:10px;">
           <div class="entry-info">
             <div class="entry-activity">${esc(e.activity)}</div>
             <div class="entry-times">${timeRange} · ${dur}</div>
-            ${e.note ? `<div class="entry-note-preview">${esc(e.note)}</div>` : ''}
+            ${e.note ? `<div class="entry-note-preview" id="note-preview-${e.id}">${esc(e.note)}</div>` : `<div class="entry-note-preview" id="note-preview-${e.id}" style="display:none;"></div>`}
             <div class="entry-badges">
               ${e.exception ? '<span class="badge badge-amber">Exception</span>' : ''}
               ${imgCount > 0 ? `<span class="badge badge-blue">📷 ${imgCount}</span>` : ''}
             </div>
           </div>
           <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;">
+            <button class="btn btn-ghost btn-xs" onclick="toggleNoteEdit(${e.id})" id="note-btn-${e.id}" title="Edit note">✏</button>
             <button class="btn btn-red btn-xs" onclick="logDelete(${e.id})">🗑</button>
+          </div>
+        </div>
+        <div id="note-edit-${e.id}" style="display:none;margin-top:8px;">
+          <textarea id="note-ta-${e.id}"
+            style="width:100%;box-sizing:border-box;min-height:72px;padding:8px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-family:var(--font);font-size:13px;resize:vertical;"
+            placeholder="Add a note…">${esc(e.note || '')}</textarea>
+          <div style="display:flex;gap:6px;margin-top:6px;">
+            <button class="btn btn-primary btn-xs" onclick="saveNoteEdit(${e.id})">Save</button>
+            <button class="btn btn-ghost btn-xs" onclick="cancelNoteEdit(${e.id})">Cancel</button>
           </div>
         </div>
         ${renderEntryImgStrip(e)}
@@ -1966,6 +2255,76 @@ function renderLog() {
   });
 
   document.getElementById('content').innerHTML = html;
+
+  // Floating recycle bin button — bottom-right corner of the Log tab
+  // Remove any existing FAB first (re-render safety)
+  const existingFab = document.getElementById('bin-fab-wrap');
+  if (existingFab) existingFab.remove();
+
+  if (db.settings.recycleBinEnabled) {
+    const binCount = db.recyclebin.length;
+    const wrap = document.createElement('div');
+    wrap.id = 'bin-fab-wrap';
+    wrap.className = 'bin-fab-wrap';
+    wrap.innerHTML = `
+      <button class="bin-fab" onclick="openBinModal()" title="Recycle Bin (${binCount} item${binCount !== 1 ? 's' : ''})">
+        🗑
+      </button>
+      ${binCount > 0 ? `<div class="bin-fab-badge">${binCount > 99 ? '99+' : binCount}</div>` : ''}
+    `;
+    document.body.appendChild(wrap);
+  }
+}
+
+function toggleNoteEdit(id) {
+  const panel = document.getElementById(`note-edit-${id}`);
+  const btn   = document.getElementById(`note-btn-${id}`);
+  if (!panel) return;
+  const opening = panel.style.display === 'none';
+  panel.style.display = opening ? 'block' : 'none';
+  btn.textContent = opening ? '✕' : '✏';
+  btn.title = opening ? 'Cancel edit' : 'Edit note';
+  if (opening) {
+    // Focus the textarea and place cursor at end
+    const ta = document.getElementById(`note-ta-${id}`);
+    if (ta) { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
+  }
+}
+
+function saveNoteEdit(id) {
+  const ta = document.getElementById(`note-ta-${id}`);
+  if (!ta) return;
+  const newNote = ta.value.trim();
+  const study = currentStudy();
+  if (!study) return;
+  const entry = study.entries.find(e => e.id === id);
+  if (!entry) return;
+  entry.note = newNote;
+  saveDb();
+  // Update preview in place — no full re-render so scroll position is preserved
+  const preview = document.getElementById(`note-preview-${id}`);
+  if (preview) {
+    preview.textContent = newNote;
+    preview.style.display = newNote ? '' : 'none';
+  }
+  // Close the edit panel
+  const panel = document.getElementById(`note-edit-${id}`);
+  const btn   = document.getElementById(`note-btn-${id}`);
+  if (panel) panel.style.display = 'none';
+  if (btn)   { btn.textContent = '✏'; btn.title = 'Edit note'; }
+  showNotice('Note saved.');
+}
+
+function cancelNoteEdit(id) {
+  // Revert textarea to saved value and close panel
+  const study = currentStudy();
+  const entry = study && study.entries.find(e => e.id === id);
+  const ta    = document.getElementById(`note-ta-${id}`);
+  if (ta && entry) ta.value = entry.note || '';
+  const panel = document.getElementById(`note-edit-${id}`);
+  const btn   = document.getElementById(`note-btn-${id}`);
+  if (panel) panel.style.display = 'none';
+  if (btn)   { btn.textContent = '✏'; btn.title = 'Edit note'; }
 }
 
 function logSearch(val) {
@@ -2409,6 +2768,65 @@ function toggleAccordion(act) {
   renderSummary();
 }
 
+// ===== NOTES FAB =====
+let notesPanelDebounce = null;
+
+function toggleNotesPanel() {
+  const panel = document.getElementById('notes-panel');
+  if (!panel) return;
+  if (panel.classList.contains('open')) {
+    _closeNotesPanel();
+  } else {
+    _openNotesPanel();
+  }
+}
+
+function _openNotesPanel() {
+  const panel = document.getElementById('notes-panel');
+  const fab   = document.getElementById('notes-fab');
+  if (!panel) return;
+  const p  = currentProfile();
+  const ta = document.getElementById('notes-panel-ta');
+  if (ta && p) ta.value = p.notes || '';
+  panel.classList.add('open');
+  if (fab) { fab.textContent = '✕'; fab.title = 'Close notes'; }
+  setTimeout(() => {
+    const ta = document.getElementById('notes-panel-ta');
+    if (ta) ta.focus();
+  }, 290);
+}
+
+function _closeNotesPanel() {
+  const panel = document.getElementById('notes-panel');
+  const fab   = document.getElementById('notes-fab');
+  if (!panel) return;
+  panel.classList.remove('open');
+  if (fab) { fab.textContent = '📝'; fab.title = 'Quick Notes'; }
+}
+
+function _notesPanelInput() {
+  clearTimeout(notesPanelDebounce);
+  notesPanelDebounce = setTimeout(() => {
+    const p      = currentProfile();
+    const ta     = document.getElementById('notes-panel-ta');
+    const footer = document.getElementById('notes-panel-saved');
+    if (!p || !ta) return;
+    p.notes = ta.value;
+    saveDb();
+    // Keep the full Notes tab textarea in sync if it's currently visible
+    const fullTa = document.getElementById('notes-area');
+    if (fullTa) fullTa.value = ta.value;
+    if (footer) footer.textContent = 'Saved ' + nowTimeStr();
+  }, 500);
+}
+
+function _updateNotesFabVisibility() {
+  const fab = document.getElementById('notes-fab');
+  if (!fab) return;
+  // Hide on the Notes tab itself — redundant there
+  fab.style.display = activeTab === 'notes' ? 'none' : 'flex';
+}
+
 // ===== NOTES TAB =====
 function renderNotes() {
   const p = currentProfile();
@@ -2430,6 +2848,9 @@ function renderNotes() {
         saveDb();
         const el = document.getElementById('notes-saved');
         if (el) el.textContent = 'Saved ' + nowTimeStr();
+        // Keep the FAB panel textarea in sync
+        const panelTa = document.getElementById('notes-panel-ta');
+        if (panelTa) panelTa.value = this.value;
       }
     }, 500);
   });
@@ -2604,7 +3025,7 @@ function addStudy() {
   const p = currentProfile();
   if (!p) return;
   const id = generateId();
-  p.studies.push({ id, name, date, activities: [], entries: [], manualStd: {} });
+  p.studies.push({ id, name, date, activities: [], entries: [], manualStd: {}, quickAddPinned: null });
   p.activeStudyId = id;
   saveDb();
   renderStudies();
@@ -2651,7 +3072,8 @@ function duplicateStudy(id) {
     date: todayStr(),
     activities: [...src.activities],
     entries: [],
-    manualStd: { ...src.manualStd }
+    manualStd: { ...src.manualStd },
+    quickAddPinned: src.quickAddPinned ? [...src.quickAddPinned] : null
   });
   saveDb();
   renderStudies();
@@ -2848,6 +3270,7 @@ function binRestore(id) {
   study.entries.push(entry);
   saveDb();
   renderBinModal();
+  _refreshBinFab();
 }
 
 function binDelete(id) {
@@ -2855,6 +3278,7 @@ function binDelete(id) {
   db.recyclebin = db.recyclebin.filter(e => e.id !== id);
   saveDb();
   renderBinModal();
+  _refreshBinFab();
 }
 
 function binClearAll() {
@@ -2862,6 +3286,22 @@ function binClearAll() {
   db.recyclebin = [];
   saveDb();
   renderBinModal();
+  _refreshBinFab();
+}
+
+function _refreshBinFab() {
+  const wrap = document.getElementById('bin-fab-wrap');
+  if (!wrap) return;
+  const binCount = db.recyclebin.length;
+  wrap.querySelector('.bin-fab').title = `Recycle Bin (${binCount} item${binCount !== 1 ? 's' : ''})`;
+  const existing = wrap.querySelector('.bin-fab-badge');
+  if (existing) existing.remove();
+  if (binCount > 0) {
+    const badge = document.createElement('div');
+    badge.className = 'bin-fab-badge';
+    badge.textContent = binCount > 99 ? '99+' : binCount;
+    wrap.appendChild(badge);
+  }
 }
 
 // ===== EXPORT =====
