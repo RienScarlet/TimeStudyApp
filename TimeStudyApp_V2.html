@@ -342,6 +342,8 @@
     background: var(--surface);
   }
   label { font-size: var(--xs-font); font-weight: 600; color: var(--text3); display: block; margin-bottom: 4px; letter-spacing: 0.05em; text-transform: uppercase; }
+  /* Labels styled as buttons must not inherit the uppercase transform */
+  label.btn { text-transform: none; letter-spacing: 0.02em; font-size: var(--sm-font); color: var(--text2); }
   .form-group { margin-bottom: 10px; }
   .form-row { display: flex; gap: 8px; align-items: flex-end; }
   .form-row .form-group { flex: 1; margin-bottom: 0; }
@@ -1223,6 +1225,13 @@
 </div>
 
 <!-- Profile Modal -->
+<div class="modal-overlay" id="act-settings-modal">
+  <div class="modal-sheet">
+    <div class="modal-title" id="act-settings-title">Activity Settings <button class="modal-close" onclick="closeModal('act-settings-modal')">✕</button></div>
+    <div id="act-settings-body"></div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="profile-modal">
   <div class="modal-sheet">
     <div class="modal-title">Switch Profile <button class="modal-close" onclick="closeModal('profile-modal')">✕</button></div>
@@ -1323,7 +1332,8 @@ function defaultDb() {
         quickAddPinned: null,   // null = show all eligible; array = user-selected subset
         activityGroups: [],     // [{id, name, color, activities:[]}]
         quickStartPinned: null, // null = show all; array = user-selected for Quick Start Timer
-        activityColors: {}      // { activityName: hexColor }
+        activityColors: {},     // { activityName: hexColor }
+        activityNotes: {}       // { activityName: descriptionText }
       }],
       activeStudyId: studyId,
       notes: ''
@@ -1396,6 +1406,7 @@ function loadDb() {
     if (!s.activityGroups)          s.activityGroups   = [];
     if (!('quickStartPinned' in s)) s.quickStartPinned = null;
     if (!s.activityColors)          s.activityColors   = {};
+    if (!s.activityNotes)           s.activityNotes    = {};
   }));
   applyTheme();
   saveDb();
@@ -1944,15 +1955,15 @@ function renderLive() {
       const isPaused  = s.paused;
       const isCollapsed = collapsedSessions.has(s.id);
       const actColor  = getActivityColor(study, s.activityName);
-      const cardStyle = actColor
-        ? `border-left-color:${actColor};`
-        : isPaused ? '' : '';
+      const actNote   = (study && study.activityNotes && study.activityNotes[s.activityName]) || '';
+      const cardStyle = actColor ? `border-left-color:${actColor};` : '';
 
       html += `
       <div class="session-card ${isPaused ? 'paused' : ''}" id="sess-${s.id}" style="${cardStyle}">
         <div class="session-card-header">
           <div style="flex:1;min-width:0;">
             <div class="session-activity" style="${actColor ? `color:${actColor};` : ''}">${esc(s.activityName)}</div>
+            ${actNote ? `<div style="font-size:11px;color:var(--text3);margin-top:1px;font-style:italic;">${esc(actNote)}</div>` : ''}
             <div class="session-start mono">${formatTime(s.startTs, mode)}</div>
           </div>
           <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
@@ -3181,6 +3192,7 @@ function renderSummary() {
     const isOpen  = expandedAccordions[act];
     const grp     = getActivityGroup(study, act);
     const aColor  = getActivityColor(study, act);
+    const aNote   = (study.activityNotes && study.activityNotes[act]) || '';
 
     html += `
     <div class="activity-summary-row" style="${aColor ? `border-left-color:${aColor};` : ''}">
@@ -3188,6 +3200,7 @@ function renderSummary() {
         <div>
           ${grp ? `<span class="group-badge" style="background:${grp.color}22;color:${grp.color};border:1px solid ${grp.color}55;margin-bottom:3px;display:inline-flex;"><span class="group-dot" style="background:${grp.color};width:6px;height:6px;"></span>${esc(grp.name)}</span><br>` : ''}
           <div class="activity-summary-name" style="${aColor ? `color:${aColor};` : ''}">${esc(act)}</div>
+          ${aNote ? `<div style="font-size:11px;color:var(--text3);margin-top:2px;font-style:italic;">${esc(aNote)}</div>` : ''}
           <div class="activity-summary-stats">${count}× · ${secsToStr(total)} total · avg ${secsToStr(avg)}${std ? ' · std ' + secsToStr(std) : ''}</div>
           <div class="activity-summary-stats">Longest ${secsToStr(longest)} · Shortest ${secsToStr(shortest)}${exceptions ? ' · ' + exceptions + ' exception(s)' : ''}</div>
         </div>
@@ -3325,47 +3338,34 @@ function renderManage() {
     </div>
   </div>`;
 
-  if (activities.length === 0) {
+  if (activities.length > 0) {
+    html += `<div class="card" style="padding:10px 12px;">
+      <div class="card-title" style="margin-bottom:8px;">Activities</div>
+      <div style="display:flex;flex-direction:column;gap:4px;">`;
+
+    activities.forEach((act, i) => {
+      const entryCount = study.entries.filter(e => e.activity === act && !e.deletedAt).length;
+      const manualStd  = study.manualStd[act] || 0;
+      const actColor   = getActivityColor(study, act);
+      const grp        = getActivityGroup(study, act);
+
+      html += `
+      <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--surface2);border-radius:var(--radius);border:1px solid var(--border);">
+        <span class="act-color-dot" style="background:${actColor || 'var(--border)'};border-color:${actColor || 'var(--border)'};cursor:default;flex-shrink:0;"></span>
+        <div style="flex:1;min-width:0;">
+          <div style="font-weight:600;font-size:13px;${actColor ? `color:${actColor};` : ''}">${esc(act)}</div>
+          <div style="font-size:10px;color:var(--text3);font-family:var(--mono);margin-top:1px;">
+            ${entryCount} entr${entryCount === 1 ? 'y' : 'ies'}${grp ? ` · ${esc(grp.name)}` : ''}${manualStd ? ` · ${secsToStr(manualStd)}` : ''}
+          </div>
+        </div>
+        <button class="btn btn-ghost btn-xs" onclick="openActivitySettings(${i})" title="Activity settings">⚙</button>
+      </div>`;
+    });
+
+    html += `</div></div>`;
+  } else {
     html += `<div class="empty-state">No activities yet. Add one above.</div>`;
   }
-
-  activities.forEach((act, i) => {
-    const entryCount = study.entries.filter(e => e.activity === act && !e.deletedAt).length;
-    const manualStd  = study.manualStd[act] || 0;
-    const autoAvg    = getAutoAvg(study, act);
-    const actColor   = getActivityColor(study, act);
-    html += `
-    <div class="card" style="padding:12px">
-      <div class="flex-between mb8">
-        <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;">
-          <button class="act-color-dot"
-            data-color-trigger="${esc(act)}"
-            onclick="toggleActivityColorPicker('${esc(act)}')"
-            style="background:${actColor || 'var(--surface2)'};border-color:${actColor || 'var(--border)'};"
-            title="Set activity colour"></button>
-          <input type="text" value="${esc(act)}" id="act-name-${i}" style="font-weight:bold;font-size:13px;">
-        </div>
-        <div style="display:flex;gap:5px;flex-shrink:0;margin-left:8px;">
-          <button class="btn btn-ghost btn-xs" onclick="manageRenameActivity(${i})">Rename</button>
-          <button class="btn btn-red btn-xs" onclick="manageDeleteActivity(${i})">Delete</button>
-        </div>
-      </div>
-      <div class="text-sm text-muted">${entryCount} entries</div>
-      <hr class="light">
-      <div class="card-title" style="margin-bottom:6px;">Standard Time</div>
-      <div class="form-row" style="align-items:flex-end;">
-        <div class="form-group">
-          <label>Manual (HH:MM:SS)</label>
-          <input type="time" step="1" id="std-${i}" value="${manualStd ? secsToHMSInput(manualStd) : ''}">
-        </div>
-        <div style="flex-shrink:0;display:flex;gap:4px;align-items:flex-end;">
-          <button class="btn btn-blue btn-xs" onclick="manageSetStd(${i}, '${esc(act)}')">Set</button>
-          ${autoAvg ? `<button class="btn btn-ghost btn-xs" onclick="manageUseAvg(${i}, '${esc(act)}', ${autoAvg})">Use Avg (${secsToStr(autoAvg)})</button>` : ''}
-        </div>
-      </div>
-      ${manualStd ? `<div class="text-sm mono" style="color:var(--blue)">Current: ${secsToStr(manualStd)}</div>` : ''}
-    </div>`;
-  });
 
   // ── Activity Groups section ──────────────────────────────────────────────
   const groups = study.activityGroups || [];
@@ -3569,6 +3569,181 @@ function secsToHMSInput(n) {
   return `${pad(Math.floor(n/3600))}:${pad(Math.floor((n%3600)/60))}:${pad(n%60)}`;
 }
 
+function openActivitySettings(i) {
+  const study = currentStudy();
+  if (!study) return;
+  const act      = study.activities[i];
+  if (!act) return;
+  const manualStd = study.manualStd[act] || 0;
+  const autoAvg   = getAutoAvg(study, act);
+  const actColor  = getActivityColor(study, act);
+  const actNote   = (study.activityNotes && study.activityNotes[act]) || '';
+
+  // Update modal title
+  document.getElementById('act-settings-title').innerHTML =
+    `<span style="${actColor ? `color:${actColor};` : ''}">${esc(act)}</span>
+     <button class="modal-close" onclick="closeModal('act-settings-modal')">✕</button>`;
+
+  // Build modal body
+  document.getElementById('act-settings-body').innerHTML = `
+    <div class="form-group">
+      <label>Activity Name</label>
+      <div style="display:flex;gap:6px;">
+        <input type="text" id="modal-act-name" value="${esc(act)}" style="flex:1;">
+        <button class="btn btn-ghost btn-sm" onclick="modalRenameActivity(${i})">Rename</button>
+      </div>
+    </div>
+
+    <div class="form-group" style="margin-top:10px;">
+      <label>Colour</label>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;">
+        <button class="act-color-swatch${!actColor ? ' selected' : ''}"
+          style="background:var(--surface2);border:2px solid ${!actColor ? 'var(--text)' : 'transparent'};font-size:11px;display:flex;align-items:center;justify-content:center;color:var(--text3);width:26px;height:26px;"
+          onclick="modalSetColor(${i}, null)" title="No colour">✕</button>
+        ${ACTIVITY_COLORS.map(c => `
+          <button class="act-color-swatch${actColor === c ? ' selected' : ''}"
+            style="background:${c};width:26px;height:26px;border:2px solid ${actColor === c ? 'var(--text)' : 'transparent'};"
+            onclick="modalSetColor(${i}, '${c}')"></button>`).join('')}
+      </div>
+    </div>
+
+    <div class="form-group" style="margin-top:10px;">
+      <label>Description / Notes</label>
+      <textarea id="modal-act-note"
+        placeholder="Optional description, instructions, or notes…"
+        style="min-height:70px;resize:vertical;font-size:13px;"
+      >${esc(actNote)}</textarea>
+      <button class="btn btn-ghost btn-sm" style="margin-top:6px;width:100%;" onclick="modalSaveNote(${i})">Save Note</button>
+    </div>
+
+    <hr class="light" style="margin:14px 0;">
+    <div class="card-title" style="margin-bottom:8px;">Standard Time</div>
+    <div class="form-row" style="align-items:flex-end;">
+      <div class="form-group">
+        <label>Manual (HH:MM:SS)</label>
+        <input type="time" step="1" id="modal-std" value="${manualStd ? secsToHMSInput(manualStd) : ''}">
+      </div>
+      <div style="flex-shrink:0;display:flex;gap:4px;align-items:flex-end;">
+        <button class="btn btn-blue btn-sm" onclick="modalSetStd(${i}, '${esc(act)}')">Set</button>
+        ${autoAvg ? `<button class="btn btn-ghost btn-sm" onclick="modalUseAvg(${i}, '${esc(act)}', ${autoAvg})">Avg (${secsToStr(autoAvg)})</button>` : ''}
+      </div>
+    </div>
+    ${manualStd ? `<div class="text-sm mono" style="color:var(--blue);margin-top:4px;">Current: ${secsToStr(manualStd)}</div>` : ''}
+
+    <hr class="light" style="margin:14px 0;">
+    <button class="btn btn-red btn-full" onclick="modalDeleteActivity(${i})">Delete Activity</button>
+  `;
+
+  openModal('act-settings-modal');
+}
+
+// Modal-specific wrappers that refresh the modal content after saving
+
+function modalRenameActivity(i) {
+  const inp = document.getElementById('modal-act-name');
+  const newName = inp ? inp.value.trim() : '';
+  if (!newName) { alert('Enter a name.'); return; }
+  const study = currentStudy();
+  if (!study) return;
+  const old = study.activities[i];
+  if (newName === old) return;
+  if (study.activities.includes(newName)) { alert('That activity name already exists.'); return; }
+  // Rename everywhere
+  study.activities[i] = newName;
+  if (study.manualStd[old])    { study.manualStd[newName]    = study.manualStd[old];    delete study.manualStd[old]; }
+  if (study.activityColors[old]) { study.activityColors[newName] = study.activityColors[old]; delete study.activityColors[old]; }
+  if (study.activityNotes && study.activityNotes[old]) { study.activityNotes[newName] = study.activityNotes[old]; delete study.activityNotes[old]; }
+  study.entries.forEach(e => { if (e.activity === old) e.activity = newName; });
+  study.activityGroups.forEach(g => {
+    const idx = g.activities.indexOf(old);
+    if (idx !== -1) g.activities[idx] = newName;
+  });
+  saveDb();
+  closeModal('act-settings-modal');
+  renderManage();
+  showNotice(`Renamed to "${newName}".`);
+}
+
+function modalSetColor(i, color) {
+  const study = currentStudy();
+  if (!study) return;
+  const act = study.activities[i];
+  if (!act) return;
+  if (!study.activityColors) study.activityColors = {};
+  if (color) study.activityColors[act] = color;
+  else delete study.activityColors[act];
+  saveDb();
+  // Refresh modal and manage list without closing
+  openActivitySettings(i);
+  renderManage();
+}
+
+function modalSaveNote(i) {
+  const ta = document.getElementById('modal-act-note');
+  if (!ta) return;
+  const study = currentStudy();
+  if (!study) return;
+  const act = study.activities[i];
+  if (!study.activityNotes) study.activityNotes = {};
+  const val = ta.value.trim();
+  if (val) study.activityNotes[act] = val;
+  else delete study.activityNotes[act];
+  saveDb();
+  showNotice('Note saved.');
+  renderManage();
+}
+
+function modalSetStd(i, actName) {
+  const inp = document.getElementById('modal-std');
+  if (!inp || !inp.value) return;
+  const [h, m, s] = inp.value.split(':').map(Number);
+  const secs = (h || 0) * 3600 + (m || 0) * 60 + (s || 0);
+  const study = currentStudy();
+  if (!study || secs <= 0) return;
+  study.manualStd[actName] = secs;
+  saveDb();
+  openActivitySettings(i); // refresh modal to show new std
+  renderManage();
+  showNotice(`Standard time set: ${secsToStr(secs)}`);
+}
+
+function modalUseAvg(i, actName, avg) {
+  const study = currentStudy();
+  if (!study) return;
+  study.manualStd[actName] = avg;
+  saveDb();
+  openActivitySettings(i);
+  renderManage();
+  showNotice(`Standard time set to average: ${secsToStr(avg)}`);
+}
+
+function modalDeleteActivity(i) {
+  const study = currentStudy();
+  if (!study) return;
+  const act = study.activities[i];
+  if (!confirm(`Delete activity "${act}"?\n\nThis removes it from the activity list. Existing log entries keep the activity name.`)) return;
+  study.activities.splice(i, 1);
+  delete study.manualStd[act];
+  if (study.activityColors) delete study.activityColors[act];
+  if (study.activityNotes)  delete study.activityNotes[act];
+  study.activityGroups.forEach(g => { g.activities = g.activities.filter(a => a !== act); });
+  saveDb();
+  closeModal('act-settings-modal');
+  renderManage();
+}
+
+function saveActivityNote(i, activityName) {
+  const ta = document.getElementById(`act-note-${i}`);
+  if (!ta) return;
+  const study = currentStudy();
+  if (!study) return;
+  if (!study.activityNotes) study.activityNotes = {};
+  const val = ta.value.trim();
+  if (val) study.activityNotes[activityName] = val;
+  else delete study.activityNotes[activityName];
+  saveDb();
+}
+
 function manageAddActivity() {
   const inp = document.getElementById('manage-new-act');
   const act = inp ? inp.value.trim() : '';
@@ -3677,7 +3852,7 @@ function addStudy() {
   const p = currentProfile();
   if (!p) return;
   const id = generateId();
-  p.studies.push({ id, name, date, activities: [], entries: [], manualStd: {}, quickAddPinned: null, activityGroups: [], quickStartPinned: null, activityColors: {} });
+  p.studies.push({ id, name, date, activities: [], entries: [], manualStd: {}, quickAddPinned: null, activityGroups: [], quickStartPinned: null, activityColors: {}, activityNotes: {} });
   p.activeStudyId = id;
   saveDb();
   renderStudies();
@@ -3728,7 +3903,8 @@ function duplicateStudy(id) {
     quickAddPinned: src.quickAddPinned ? [...src.quickAddPinned] : null,
     activityGroups: src.activityGroups ? src.activityGroups.map(g => ({...g, activities: [...g.activities]})) : [],
     quickStartPinned: src.quickStartPinned ? [...src.quickStartPinned] : null,
-    activityColors: src.activityColors ? {...src.activityColors} : {}
+    activityColors: src.activityColors ? {...src.activityColors} : {},
+    activityNotes:  src.activityNotes  ? {...src.activityNotes}  : {}
   });
   saveDb();
   renderStudies();
@@ -3789,6 +3965,20 @@ function renderSettings() {
       <label class="btn btn-ghost btn-full" style="cursor:pointer;">
         ⬆ Import Backup (JSON)
         <input type="file" accept=".json" style="display:none" onchange="importJson(this)">
+      </label>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Activity Presets</div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:10px;">
+      A preset captures the current study's activities, groups, colours, standard times, and descriptions — without any logged entries. Use it to quickly set up a new study with the same structure.
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      <button class="btn btn-ghost btn-full" onclick="exportPreset()">⬇ Export Preset</button>
+      <label class="btn btn-ghost btn-full" style="cursor:pointer;">
+        ⬆ Import Preset
+        <input type="file" accept=".json" style="display:none" onchange="importPreset(this)">
       </label>
     </div>
   </div>
@@ -4128,6 +4318,118 @@ function exportXlsx() {
     console.error('XLSX export error:', err);
     alert('XLSX export failed. Try CSV instead.');
   }
+}
+
+// ===== PRESET EXPORT / IMPORT =====
+// A preset is a stripped study snapshot: activities, groups, colours,
+// standard times, and descriptions — no entries, no timestamps.
+function exportPreset() {
+  const study = currentStudy();
+  if (!study) { alert('No active study.'); return; }
+
+  const preset = {
+    _type: 'timestudy-preset-v1',
+    name: study.name,
+    exportedAt: new Date().toISOString(),
+    activities:     [...(study.activities || [])],
+    manualStd:      {...(study.manualStd  || {})},
+    activityGroups: (study.activityGroups || []).map(g => ({
+      name: g.name,
+      color: g.color,
+      activities: [...g.activities]
+    })),
+    activityColors: {...(study.activityColors || {})},
+    activityNotes:  {...(study.activityNotes  || {})}
+  };
+
+  const blob = new Blob([JSON.stringify(preset, null, 2)], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `${study.name.replace(/\s+/g, '_')}_preset_${todayStr()}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showNotice('Preset exported.');
+}
+
+function importPreset(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const preset = JSON.parse(ev.target.result);
+
+      // Validate
+      if (!preset._type || !preset._type.startsWith('timestudy-preset')) {
+        alert('This file is not a valid Time Study preset.\n\nMake sure you are importing a preset file exported from this app, not a full backup.');
+        return;
+      }
+
+      const study = currentStudy();
+      if (!study) { alert('No active study.'); return; }
+
+      const actCount   = (preset.activities || []).length;
+      const grpCount   = (preset.activityGroups || []).length;
+      const presetName = preset.name || 'Unknown';
+
+      const msg = `Import preset "${presetName}"?\n\n` +
+        `• ${actCount} activities\n` +
+        `• ${grpCount} groups\n\n` +
+        `Choose how to apply it:\n\n` +
+        `OK = Merge with existing (keeps your current activities)\n` +
+        `Cancel = Do nothing`;
+
+      if (!confirm(msg)) { input.value = ''; return; }
+
+      // Merge activities — add any that don't already exist
+      if (!study.activities) study.activities = [];
+      (preset.activities || []).forEach(a => {
+        if (!study.activities.includes(a)) study.activities.push(a);
+      });
+
+      // Merge standard times — preset wins for any activity it defines
+      if (!study.manualStd) study.manualStd = {};
+      Object.assign(study.manualStd, preset.manualStd || {});
+
+      // Merge activity colours — preset wins
+      if (!study.activityColors) study.activityColors = {};
+      Object.assign(study.activityColors, preset.activityColors || {});
+
+      // Merge activity notes — preset wins
+      if (!study.activityNotes) study.activityNotes = {};
+      Object.assign(study.activityNotes, preset.activityNotes || {});
+
+      // Merge groups — add groups that don't already exist by name
+      if (!study.activityGroups) study.activityGroups = [];
+      (preset.activityGroups || []).forEach(pg => {
+        const existing = study.activityGroups.find(g => g.name === pg.name);
+        if (existing) {
+          // Add any new activities to the existing group
+          pg.activities.forEach(a => {
+            if (!existing.activities.includes(a)) existing.activities.push(a);
+          });
+          existing.color = pg.color; // update colour
+        } else {
+          study.activityGroups.push({
+            id: generateId(),
+            name: pg.name,
+            color: pg.color,
+            activities: [...pg.activities]
+          });
+        }
+      });
+
+      saveDb();
+      render();
+      showNotice(`Preset "${presetName}" imported — ${actCount} activities, ${grpCount} groups.`);
+    } catch(e) {
+      alert('Failed to parse preset file. Make sure it is a valid JSON preset.');
+      console.error(e);
+    }
+    input.value = '';
+  };
+  reader.readAsText(file);
 }
 
 function exportJson() {
