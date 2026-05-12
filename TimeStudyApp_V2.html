@@ -932,13 +932,16 @@
     line-height: 1.6;
   }
   .notes-panel-footer {
-    padding: 5px 16px 8px;
+    padding: 5px 16px 10px;
+    padding-left: 60px; /* clear the notes FAB which sits bottom-left */
     font-size: 10px;
     font-family: var(--mono);
     color: var(--text3);
     letter-spacing: 0.04em;
     flex-shrink: 0;
   }
+  /* When the notes panel is open it should render above the FAB */
+  .notes-panel.open { z-index: 501; }
   @media (min-width: 900px) {
     .notes-fab  { bottom: 22px; left: 22px; }
     .notes-panel {
@@ -952,10 +955,8 @@
 
   /* RECYCLE BIN FAB */
   .bin-fab {
-    position: fixed;
-    bottom: calc(var(--tab-h) + 14px);
-    right: 14px;
-    z-index: 500;
+    position: relative;
+    z-index: 0;
     width: 40px;
     height: 40px;
     border-radius: 3px;
@@ -977,6 +978,7 @@
     bottom: calc(var(--tab-h) + 14px);
     right: 14px;
     z-index: 500;
+    isolation: isolate;
   }
   .bin-fab-badge {
     position: absolute;
@@ -995,6 +997,7 @@
     justify-content: center;
     padding: 0 3px;
     pointer-events: none;
+    z-index: 2;
   }
   @media (min-width: 900px) {
     .bin-fab-wrap { bottom: 22px; right: 22px; }
@@ -1046,7 +1049,104 @@
   }
   .group-activity-tag button:hover { color: var(--red); }
 
-  /* MAIN LAYOUT — mobile: simple column, desktop: sidebar grid */
+  /* SWIPE-TO-DELETE on log entries */
+  .entry-row-wrap {
+    position: relative;
+    overflow: hidden;
+    border-radius: var(--radius);
+    margin-bottom: 4px;
+  }
+  .swipe-delete-bg {
+    position: absolute;
+    inset: 0;
+    background: var(--red);
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 20px;
+    color: #fff;
+    font-size: 18px;
+    border-radius: var(--radius);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.12s;
+  }
+  .entry-row-inner {
+    position: relative;
+    background: var(--surface);
+    transform: translateX(0);
+    transition: transform 0.18s ease;
+    touch-action: pan-y;
+    will-change: transform;
+  }
+  .entry-row-wrap.swiping .swipe-delete-bg { opacity: 1; }
+
+  /* COLLAPSIBLE SESSION CARDS */
+  .session-card-body {
+    overflow: hidden;
+    transition: max-height 0.22s ease, opacity 0.18s ease;
+    max-height: 400px;
+    opacity: 1;
+  }
+  .session-card-body.collapsed {
+    max-height: 0;
+    opacity: 0;
+  }
+  .session-collapse-btn {
+    background: none;
+    border: none;
+    color: var(--text3);
+    cursor: pointer;
+    font-size: 12px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: var(--mono);
+    transition: color 0.12s;
+    flex-shrink: 0;
+  }
+  .session-collapse-btn:hover { color: var(--text2); }
+
+  /* ACTIVITY COLOUR SWATCH in Manage */
+  .act-color-dot {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: transform 0.12s;
+  }
+  .act-color-dot:hover { transform: scale(1.2); }
+  .act-color-picker {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    padding: 8px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-top: 4px;
+  }
+  .act-color-swatch {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: transform 0.1s, border-color 0.1s;
+  }
+  .act-color-swatch:hover { transform: scale(1.15); }
+  .act-color-swatch.selected { border-color: var(--text); }
+
+  /* ACTIVITY COLOUR left-bar on session cards */
+  .session-card-color-bar {
+    width: 4px;
+    border-radius: 2px 0 0 2px;
+    flex-shrink: 0;
+    align-self: stretch;
+  }
+
+  /* MAIN LAYOUT */
   #main-layout {
     display: flex;
     flex-direction: column;
@@ -1222,7 +1322,8 @@ function defaultDb() {
         manualStd: {},
         quickAddPinned: null,   // null = show all eligible; array = user-selected subset
         activityGroups: [],     // [{id, name, color, activities:[]}]
-        quickStartPinned: null  // null = show all; array = user-selected for Quick Start Timer
+        quickStartPinned: null, // null = show all; array = user-selected for Quick Start Timer
+        activityColors: {}      // { activityName: hexColor }
       }],
       activeStudyId: studyId,
       notes: ''
@@ -1294,6 +1395,7 @@ function loadDb() {
     if (!('quickAddPinned'   in s)) s.quickAddPinned   = null;
     if (!s.activityGroups)          s.activityGroups   = [];
     if (!('quickStartPinned' in s)) s.quickStartPinned = null;
+    if (!s.activityColors)          s.activityColors   = {};
   }));
   applyTheme();
   saveDb();
@@ -1441,6 +1543,7 @@ function getElapsed(session) {
 }
 
 function startSession(activityName) {
+  haptic(40); // short pulse — timer started
   const id = generateId();
   activeSessions.push({
     id, activityName,
@@ -1458,6 +1561,7 @@ function startSession(activityName) {
 function pauseSession(id) {
   const s = activeSessions.find(s => s.id === id);
   if (!s || s.paused) return;
+  haptic(30);
   s.paused = true;
   s.pausedAt = Date.now();
   renderLive();
@@ -1466,6 +1570,7 @@ function pauseSession(id) {
 function resumeSession(id) {
   const s = activeSessions.find(s => s.id === id);
   if (!s || !s.paused) return;
+  haptic(40);
   s.totalPausedMs += Date.now() - s.pausedAt;
   s.paused = false;
   s.pausedAt = null;
@@ -1475,6 +1580,7 @@ function resumeSession(id) {
 function stopAndSave(id) {
   const s = activeSessions.find(sess => sess.id === id);
   if (!s) return;
+  haptic([40, 60, 40]); // double pulse — saved
   const endTs = Date.now();
   const duration = getElapsed(s);
   const study = currentStudy();
@@ -1765,8 +1871,13 @@ function renderLive() {
         ${visible.length > 0
           ? visible.map(a => {
               const isRunning = activeSessions.some(s => s.activityName === a && !s.paused);
+              const aColor    = getActivityColor(study, a);
+              const btnStyle  = aColor
+                ? `border-left:3px solid ${aColor};${isRunning ? '' : `color:${aColor};`}`
+                : '';
               return `<button
                 class="btn btn-sm ${isRunning ? 'btn-green' : 'btn-ghost'}"
+                style="${btnStyle}"
                 onclick="quickStartTimer('${esc(a)}')"
                 title="${isRunning ? 'Already running' : 'Start timer for ' + esc(a)}">
                 ${isRunning ? '▶' : '▷'} ${esc(a)}
@@ -1823,45 +1934,71 @@ function renderLive() {
     </div>`;
   } // end if (quickAdds.length > 0)
 
+  const collapsedSessions = window._collapsedSessions || (window._collapsedSessions = new Set());
+
   if (activeSessions.length === 0) {
     html += `<div class="empty-state">No active sessions.<br>Start a timer above.</div>`;
   } else {
     activeSessions.forEach(s => {
-      const elapsed = getElapsed(s);
-      const isPaused = s.paused;
+      const elapsed   = getElapsed(s);
+      const isPaused  = s.paused;
+      const isCollapsed = collapsedSessions.has(s.id);
+      const actColor  = getActivityColor(study, s.activityName);
+      const cardStyle = actColor
+        ? `border-left-color:${actColor};`
+        : isPaused ? '' : '';
+
       html += `
-      <div class="session-card ${isPaused ? 'paused' : ''}" id="sess-${s.id}">
+      <div class="session-card ${isPaused ? 'paused' : ''}" id="sess-${s.id}" style="${cardStyle}">
         <div class="session-card-header">
-          <div>
-            <div class="session-activity">${esc(s.activityName)}</div>
+          <div style="flex:1;min-width:0;">
+            <div class="session-activity" style="${actColor ? `color:${actColor};` : ''}">${esc(s.activityName)}</div>
             <div class="session-start mono">${formatTime(s.startTs, mode)}</div>
           </div>
-          <div>
+          <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
             <div class="timer-display ${isPaused ? 'paused' : ''}" id="timer-${s.id}">${secsToStr(elapsed)}</div>
-            ${isPaused ? '<div class="badge badge-amber" style="float:right;margin-top:3px;">PAUSED</div>' : ''}
+            ${isPaused ? '<div class="badge badge-amber">PAUSED</div>' : ''}
+            <button class="session-collapse-btn" onclick="toggleSessionCollapse('${s.id}')" title="${isCollapsed ? 'Expand' : 'Collapse'}">
+              ${isCollapsed ? '▼' : '▲'}
+            </button>
           </div>
         </div>
-        <div class="session-meta">
-          <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:12px;">
-            <input type="checkbox" ${s.exception ? 'checked' : ''} onchange="sessionToggleException('${s.id}', this.checked)"> Exception
-          </label>
-        </div>
-        <div class="session-note">
-          <input type="text" placeholder="Add note…" value="${esc(s.note)}" oninput="sessionNote('${s.id}', this.value)">
-        </div>
-        <div class="session-img-section">${renderSessionImgStrip(s.id)}</div>
-        <div class="session-actions">
+        <div class="session-actions" style="margin-top:8px;">
           ${isPaused
             ? `<button class="btn btn-green btn-sm" onclick="resumeSession('${s.id}')">▶ Resume</button>`
             : `<button class="btn btn-amber btn-sm" onclick="pauseSession('${s.id}')">⏸ Pause</button>`}
           <button class="btn btn-primary btn-sm" onclick="stopAndSave('${s.id}')">⏹ Save</button>
           <button class="btn btn-ghost btn-sm" onclick="discardSession('${s.id}')">✕ Discard</button>
         </div>
+        <div class="session-card-body ${isCollapsed ? 'collapsed' : ''}">
+          <div class="session-meta" style="margin-top:8px;">
+            <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:12px;">
+              <input type="checkbox" ${s.exception ? 'checked' : ''} onchange="sessionToggleException('${s.id}', this.checked)"> Exception
+            </label>
+          </div>
+          <div class="session-note">
+            <input type="text" placeholder="Add note…" value="${esc(s.note)}" oninput="sessionNote('${s.id}', this.value)">
+          </div>
+          <div class="session-img-section">${renderSessionImgStrip(s.id)}</div>
+        </div>
       </div>`;
     });
   }
 
   document.getElementById('content').innerHTML = html;
+}
+
+function toggleSessionCollapse(id) {
+  const set = window._collapsedSessions || (window._collapsedSessions = new Set());
+  if (set.has(id)) set.delete(id); else set.add(id);
+  const card = document.getElementById(`sess-${id}`);
+  if (!card) return;
+  const body = card.querySelector('.session-card-body');
+  const btn  = card.querySelector('.session-collapse-btn');
+  const isNowCollapsed = set.has(id);
+  if (body) body.classList.toggle('collapsed', isNowCollapsed);
+  if (btn)  btn.textContent = isNowCollapsed ? '▼' : '▲';
+  // Actions row is always visible — no change needed there
 }
 
 function liveStart() {
@@ -2352,48 +2489,85 @@ function manSave() {
 
 // ===== LOG TAB =====
 function renderLog() {
-  const study = currentStudy();
+  const study   = currentStudy();
   const entries = (study ? study.entries : []).filter(e => !e.deletedAt);
-  const mode = db.settings.hourMode;
 
-  // Filter
+  // Write the outer shell once — filter input, count bar, entries container
+  document.getElementById('content').innerHTML = `
+  <div class="search-bar">
+    <input type="search" id="log-filter-input" placeholder="Filter by activity…"
+      value="${esc(logFilter)}"
+      oninput="logSearch(this.value)"
+      autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+  </div>
+  <div class="flex-between mb8" id="log-count-bar">
+    <span class="text-sm text-muted" id="log-count-label">${entries.length} entr${entries.length === 1 ? 'y' : 'ies'}</span>
+    <button class="btn btn-red btn-xs" onclick="logClearAll()">Clear All</button>
+  </div>
+  <div id="log-entries-container"></div>`;
+
+  // Render the entries into the container and attach swipe handlers
+  _renderLogEntries();
+
+  // Floating recycle bin FAB
+  const existingFab = document.getElementById('bin-fab-wrap');
+  if (existingFab) existingFab.remove();
+
+  if (db.settings.recycleBinEnabled) {
+    const binCount = db.recyclebin.length;
+    const wrap = document.createElement('div');
+    wrap.id = 'bin-fab-wrap';
+    wrap.className = 'bin-fab-wrap';
+    wrap.innerHTML = `
+      <button class="bin-fab" onclick="openBinModal()" title="Recycle Bin (${binCount} item${binCount !== 1 ? 's' : ''})">
+        🗑
+      </button>
+      ${binCount > 0 ? `<div class="bin-fab-badge">${binCount > 99 ? '99+' : binCount}</div>` : ''}
+    `;
+    document.body.appendChild(wrap);
+  }
+}
+
+function _renderLogEntries() {
+  const study   = currentStudy();
+  const mode    = db.settings.hourMode;
+  const entries = (study ? study.entries : []).filter(e => !e.deletedAt);
+
   const filtered = logFilter
     ? entries.filter(e => e.activity.toLowerCase().includes(logFilter.toLowerCase()))
     : entries;
 
-  // Sort newest first
   const sorted = [...filtered].sort((a, b) => (b.startTs || 0) - (a.startTs || 0));
-
-  // Group by date
   const groups = {};
   sorted.forEach(e => { (groups[e.date] = groups[e.date] || []).push(e); });
   const dates = Object.keys(groups).sort((a, b) => b.localeCompare(a));
 
-  let html = `
-  <div class="search-bar">
-    <input type="search" placeholder="Filter by activity…" value="${esc(logFilter)}" oninput="logSearch(this.value)">
-  </div>
-  <div class="flex-between mb8">
-    <span class="text-sm text-muted">${filtered.length} entr${filtered.length === 1 ? 'y' : 'ies'}</span>
-    <button class="btn btn-red btn-xs" onclick="logClearAll()">Clear All</button>
-  </div>`;
+  // Update the count label without touching the filter input
+  const countLabel = document.getElementById('log-count-label');
+  if (countLabel) countLabel.textContent = `${filtered.length} entr${filtered.length === 1 ? 'y' : 'ies'}`;
+
+  let html = '';
 
   if (dates.length === 0) {
-    html += `<div class="empty-state">No entries yet.</div>`;
+    html = `<div class="empty-state">${logFilter ? 'No matching entries.' : 'No entries yet.'}</div>`;
   }
 
   dates.forEach(date => {
     html += `<div class="date-heading">${date}</div>`;
     groups[date].forEach(e => {
-      const dur = secsToStr(e.duration);
+      const dur     = secsToStr(e.duration);
       const timeRange = `${displayTime(e, 'start', mode)} → ${displayTime(e, 'end', mode)}`;
-      const imgCount = (e.images || []).length;
-      const grp = getActivityGroup(study, e.activity);
+      const imgCount  = (e.images || []).length;
+      const grp       = getActivityGroup(study, e.activity);
+      const eColor    = getActivityColor(study, e.activity);
       const activityOptions = (study ? study.activities : [])
         .map(a => `<option value="${esc(a)}" ${a === e.activity ? 'selected' : ''}>${esc(a)}</option>`)
         .join('');
       html += `
-      <div class="entry-row" id="entry-row-${e.id}" style="flex-direction:column;align-items:stretch;">
+      <div class="entry-row-wrap">
+        <div class="swipe-delete-bg">🗑</div>
+        <div class="entry-row-inner">
+        <div class="entry-row" id="entry-row-${e.id}" style="flex-direction:column;align-items:stretch;${eColor ? `border-left-color:${eColor};` : ''}">
         <div style="display:flex;align-items:flex-start;gap:10px;">
           <div class="entry-info">
             <div class="entry-activity" id="act-label-${e.id}">${esc(e.activity)}</div>
@@ -2432,29 +2606,53 @@ function renderLog() {
           </div>
         </div>
         ${renderEntryImgStrip(e)}
+      </div>
+        </div>
       </div>`;
     });
   });
 
-  document.getElementById('content').innerHTML = html;
-
-  // Floating recycle bin button — bottom-right corner of the Log tab
-  // Remove any existing FAB first (re-render safety)
-  const existingFab = document.getElementById('bin-fab-wrap');
-  if (existingFab) existingFab.remove();
-
-  if (db.settings.recycleBinEnabled) {
-    const binCount = db.recyclebin.length;
-    const wrap = document.createElement('div');
-    wrap.id = 'bin-fab-wrap';
-    wrap.className = 'bin-fab-wrap';
-    wrap.innerHTML = `
-      <button class="bin-fab" onclick="openBinModal()" title="Recycle Bin (${binCount} item${binCount !== 1 ? 's' : ''})">
-        🗑
-      </button>
-      ${binCount > 0 ? `<div class="bin-fab-badge">${binCount > 99 ? '99+' : binCount}</div>` : ''}
-    `;
-    document.body.appendChild(wrap);
+  const container = document.getElementById('log-entries-container');
+  if (container) {
+    container.innerHTML = html;
+    // Attach swipe-to-delete handlers
+    container.querySelectorAll('.entry-row-wrap').forEach(wrap => {
+      const inner = wrap.querySelector('.entry-row-inner');
+      const bg    = wrap.querySelector('.swipe-delete-bg');
+      if (!inner) return;
+      let startX = 0, startY = 0, dx = 0, swiping = false;
+      inner.addEventListener('touchstart', e => {
+        startX = e.touches[0].clientX; startY = e.touches[0].clientY;
+        dx = 0; swiping = false;
+      }, { passive: true });
+      inner.addEventListener('touchmove', e => {
+        const moveX = e.touches[0].clientX - startX;
+        const moveY = e.touches[0].clientY - startY;
+        if (!swiping && Math.abs(moveY) > Math.abs(moveX)) return;
+        if (moveX > 0) return;
+        swiping = true;
+        dx = Math.max(moveX, -120);
+        inner.style.transition = 'none';
+        inner.style.transform  = `translateX(${dx}px)`;
+        wrap.classList.toggle('swiping', dx < -20);
+        bg.style.opacity = Math.min(Math.abs(dx) / 80, 1);
+      }, { passive: true });
+      inner.addEventListener('touchend', () => {
+        inner.style.transition = '';
+        if (dx < -80) {
+          inner.style.transform = 'translateX(-100%)';
+          bg.style.opacity = '1';
+          const entryRow = wrap.querySelector('[id^="entry-row-"]');
+          const entryId  = entryRow ? parseInt(entryRow.id.replace('entry-row-', '')) : null;
+          if (entryId !== null) { haptic([30, 50, 30]); setTimeout(() => logDelete(entryId), 220); }
+        } else {
+          inner.style.transform = 'translateX(0)';
+          bg.style.opacity = '0';
+          wrap.classList.remove('swiping');
+        }
+        dx = 0;
+      });
+    });
   }
 }
 
@@ -2578,7 +2776,9 @@ function cancelNoteEdit(id) {
 
 function logSearch(val) {
   logFilter = val;
-  renderLog();
+  // Only re-render the entries list — the filter input is left untouched
+  // so the keyboard stays open and the cursor position is preserved.
+  _renderLogEntries();
 }
 
 function logDelete(id) {
@@ -2977,16 +3177,17 @@ function renderSummary() {
     const longest = Math.max(...items.map(e => e.duration || 0));
     const shortest = Math.min(...items.map(e => e.duration || 0));
     const exceptions = items.filter(e => e.exception).length;
-    const std = study.manualStd[act] || 0;
-    const isOpen = expandedAccordions[act];
-    const grp = getActivityGroup(study, act);
+    const std     = study.manualStd[act] || 0;
+    const isOpen  = expandedAccordions[act];
+    const grp     = getActivityGroup(study, act);
+    const aColor  = getActivityColor(study, act);
 
     html += `
-    <div class="activity-summary-row">
+    <div class="activity-summary-row" style="${aColor ? `border-left-color:${aColor};` : ''}">
       <div class="activity-summary-header" onclick="toggleAccordion('${esc(act)}')">
         <div>
           ${grp ? `<span class="group-badge" style="background:${grp.color}22;color:${grp.color};border:1px solid ${grp.color}55;margin-bottom:3px;display:inline-flex;"><span class="group-dot" style="background:${grp.color};width:6px;height:6px;"></span>${esc(grp.name)}</span><br>` : ''}
-          <div class="activity-summary-name">${esc(act)}</div>
+          <div class="activity-summary-name" style="${aColor ? `color:${aColor};` : ''}">${esc(act)}</div>
           <div class="activity-summary-stats">${count}× · ${secsToStr(total)} total · avg ${secsToStr(avg)}${std ? ' · std ' + secsToStr(std) : ''}</div>
           <div class="activity-summary-stats">Longest ${secsToStr(longest)} · Shortest ${secsToStr(shortest)}${exceptions ? ' · ' + exceptions + ' exception(s)' : ''}</div>
         </div>
@@ -3040,7 +3241,7 @@ function _openNotesPanel() {
   const ta = document.getElementById('notes-panel-ta');
   if (ta && p) ta.value = p.notes || '';
   panel.classList.add('open');
-  if (fab) { fab.textContent = '✕'; fab.title = 'Close notes'; }
+  if (fab) { fab.textContent = '✕'; fab.title = 'Close notes'; fab.style.opacity = '0'; fab.style.pointerEvents = 'none'; }
   setTimeout(() => {
     const ta = document.getElementById('notes-panel-ta');
     if (ta) ta.focus();
@@ -3052,7 +3253,7 @@ function _closeNotesPanel() {
   const fab   = document.getElementById('notes-fab');
   if (!panel) return;
   panel.classList.remove('open');
-  if (fab) { fab.textContent = '📝'; fab.title = 'Quick Notes'; }
+  if (fab) { fab.textContent = '📝'; fab.title = 'Quick Notes'; fab.style.opacity = ''; fab.style.pointerEvents = ''; }
 }
 
 function _notesPanelInput() {
@@ -3130,12 +3331,18 @@ function renderManage() {
 
   activities.forEach((act, i) => {
     const entryCount = study.entries.filter(e => e.activity === act && !e.deletedAt).length;
-    const manualStd = study.manualStd[act] || 0;
-    const autoAvg = getAutoAvg(study, act);
+    const manualStd  = study.manualStd[act] || 0;
+    const autoAvg    = getAutoAvg(study, act);
+    const actColor   = getActivityColor(study, act);
     html += `
     <div class="card" style="padding:12px">
       <div class="flex-between mb8">
-        <div style="flex:1;min-width:0;">
+        <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;">
+          <button class="act-color-dot"
+            data-color-trigger="${esc(act)}"
+            onclick="toggleActivityColorPicker('${esc(act)}')"
+            style="background:${actColor || 'var(--surface2)'};border-color:${actColor || 'var(--border)'};"
+            title="Set activity colour"></button>
           <input type="text" value="${esc(act)}" id="act-name-${i}" style="font-weight:bold;font-size:13px;">
         </div>
         <div style="display:flex;gap:5px;flex-shrink:0;margin-left:8px;">
@@ -3229,7 +3436,67 @@ function renderManage() {
   document.getElementById('content').innerHTML = html;
 }
 
-// ===== ACTIVITY GROUPS =====
+// ===== HAPTIC FEEDBACK =====
+function haptic(pattern) {
+  if (navigator.vibrate) navigator.vibrate(pattern);
+}
+
+// ===== ACTIVITY COLOURS =====
+const ACTIVITY_COLORS = [
+  '#1D4ED8','#059669','#D97706','#DC2626','#7C3AED',
+  '#0891B2','#BE185D','#65A30D','#EA580C','#0F766E'
+];
+
+function getActivityColor(study, activityName) {
+  if (!study || !study.activityColors) return null;
+  return study.activityColors[activityName] || null;
+}
+
+function setActivityColor(activityName, color) {
+  const study = currentStudy();
+  if (!study) return;
+  if (!study.activityColors) study.activityColors = {};
+  if (color) study.activityColors[activityName] = color;
+  else delete study.activityColors[activityName];
+  saveDb();
+  renderManage();
+}
+
+function toggleActivityColorPicker(activityName) {
+  const id = `color-picker-${CSS.escape(activityName)}`;
+  const existing = document.getElementById(id);
+  // Close any other open pickers first
+  document.querySelectorAll('.act-color-picker').forEach(el => {
+    if (el.id !== id) el.remove();
+  });
+  if (existing) { existing.remove(); return; }
+  const study = currentStudy();
+  const current = getActivityColor(study, activityName);
+  const dot = document.querySelector(`[data-color-trigger="${CSS.escape(activityName)}"]`);
+  if (!dot) return;
+  const picker = document.createElement('div');
+  picker.className = 'act-color-picker';
+  picker.id = id;
+  // None option
+  const noneBtn = document.createElement('button');
+  noneBtn.className = 'act-color-swatch' + (!current ? ' selected' : '');
+  noneBtn.style.cssText = 'background:var(--surface2);border-color:var(--border);font-size:10px;display:flex;align-items:center;justify-content:center;color:var(--text3);';
+  noneBtn.title = 'No colour';
+  noneBtn.textContent = '✕';
+  noneBtn.onclick = () => setActivityColor(activityName, null);
+  picker.appendChild(noneBtn);
+  ACTIVITY_COLORS.forEach(c => {
+    const btn = document.createElement('button');
+    btn.className = 'act-color-swatch' + (current === c ? ' selected' : '');
+    btn.style.background = c;
+    btn.title = c;
+    btn.onclick = () => setActivityColor(activityName, c);
+    picker.appendChild(btn);
+  });
+  dot.parentNode.insertBefore(picker, dot.nextSibling);
+}
+
+
 const GROUP_COLORS = ['#e05555','#d4920a','#3dba6e','#5b8fe8','#a855f7','#ec4899','#14b8a6','#f97316'];
 
 function selectGroupColor(color) {
@@ -3410,7 +3677,7 @@ function addStudy() {
   const p = currentProfile();
   if (!p) return;
   const id = generateId();
-  p.studies.push({ id, name, date, activities: [], entries: [], manualStd: {}, quickAddPinned: null, activityGroups: [], quickStartPinned: null });
+  p.studies.push({ id, name, date, activities: [], entries: [], manualStd: {}, quickAddPinned: null, activityGroups: [], quickStartPinned: null, activityColors: {} });
   p.activeStudyId = id;
   saveDb();
   renderStudies();
@@ -3460,7 +3727,8 @@ function duplicateStudy(id) {
     manualStd: { ...src.manualStd },
     quickAddPinned: src.quickAddPinned ? [...src.quickAddPinned] : null,
     activityGroups: src.activityGroups ? src.activityGroups.map(g => ({...g, activities: [...g.activities]})) : [],
-    quickStartPinned: src.quickStartPinned ? [...src.quickStartPinned] : null
+    quickStartPinned: src.quickStartPinned ? [...src.quickStartPinned] : null,
+    activityColors: src.activityColors ? {...src.activityColors} : {}
   });
   saveDb();
   renderStudies();
@@ -3901,18 +4169,36 @@ function downloadBlob(content, filename, type) {
 }
 
 // ===== MODAL HELPERS =====
+function _setFabsHidden(hidden) {
+  const notesFab = document.getElementById('notes-fab');
+  const binFab   = document.getElementById('bin-fab-wrap');
+  [notesFab, binFab].forEach(el => {
+    if (!el) return;
+    el.style.opacity       = hidden ? '0' : '';
+    el.style.pointerEvents = hidden ? 'none' : '';
+  });
+}
+
 function openModal(id) {
   document.getElementById(id).classList.add('open');
+  _setFabsHidden(true);
 }
 
 function closeModal(id) {
   document.getElementById(id).classList.remove('open');
+  // Only restore FABs if no other modal is still open
+  const anyOpen = document.querySelector('.modal-overlay.open');
+  if (!anyOpen) _setFabsHidden(false);
 }
 
 // Close modals on overlay click
 document.querySelectorAll('.modal-overlay').forEach(el => {
   el.addEventListener('click', function(e) {
-    if (e.target === this) this.classList.remove('open');
+    if (e.target === this) {
+      this.classList.remove('open');
+      const anyOpen = document.querySelector('.modal-overlay.open');
+      if (!anyOpen) _setFabsHidden(false);
+    }
   });
 });
 
