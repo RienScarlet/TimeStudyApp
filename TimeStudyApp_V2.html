@@ -1791,8 +1791,79 @@ function switchTab(tab) {
     const tabs = ['live','manual','log','summary','charts','notes','manage','studies','settings'];
     b.classList.toggle('active', tabs[i] === tab);
   });
+  // Push a history entry so the browser back button navigates between tabs.
+  // Use replaceState for the very first tab to avoid a dead initial entry.
+  const state = { tab };
+  if (history.state && history.state.tab) {
+    history.pushState(state, '', '');
+  } else {
+    history.replaceState(state, '', '');
+  }
   render();
 }
+
+// ── Back-navigation handling ──────────────────────────────────────────────────
+// On popstate (back button), restore the tab from history state.
+// When there's nothing left to pop (state is null) on mobile, require a second
+// back press within 2 s to actually exit the app.
+let _backPressedOnce = false;
+let _backToastEl     = null;
+
+window.addEventListener('popstate', e => {
+  if (e.state && e.state.tab) {
+    // Navigate back to the tab in the history entry
+    activeTab = e.state.tab;
+    const fab = document.getElementById('bin-fab-wrap');
+    if (fab) fab.remove();
+    _closeNotesPanel();
+    _updateNotesFabVisibility();
+    document.querySelectorAll('.tab-btn').forEach((b, i) => {
+      const tabs = ['live','manual','log','summary','charts','notes','manage','studies','settings'];
+      b.classList.toggle('active', tabs[i] === e.state.tab);
+    });
+    render();
+  } else {
+    // No more history — on mobile show "press again to exit" toast
+    const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ||
+                     (navigator.maxTouchPoints > 1 && window.innerWidth < 900);
+    if (!isMobile) return; // desktop: let browser handle normally
+
+    // Push a dummy state back so we stay in the app
+    history.pushState({ tab: activeTab }, '', '');
+
+    if (_backPressedOnce) {
+      // Second back within 2 s — exit
+      if (_backToastEl) _backToastEl.remove();
+      history.go(-(history.length)); // try to close; works in some mobile browsers
+      window.close();                // fallback
+      return;
+    }
+
+    _backPressedOnce = true;
+
+    // Show toast
+    if (_backToastEl) _backToastEl.remove();
+    _backToastEl = document.createElement('div');
+    _backToastEl.textContent = 'Press back again to exit';
+    _backToastEl.style.cssText = `
+      position:fixed; bottom:calc(var(--tab-h) + 20px); left:50%;
+      transform:translateX(-50%);
+      background:rgba(15,14,12,0.88); color:#f0efe9;
+      padding:10px 20px; border-radius:4px;
+      font-size:13px; font-family:var(--font);
+      z-index:9999; pointer-events:none;
+      white-space:nowrap;
+      box-shadow:0 2px 12px rgba(0,0,0,0.25);
+    `;
+    document.body.appendChild(_backToastEl);
+
+    // Auto-dismiss after 2 s and reset flag
+    setTimeout(() => {
+      if (_backToastEl) { _backToastEl.remove(); _backToastEl = null; }
+      _backPressedOnce = false;
+    }, 2000);
+  }
+});
 
 function render() {
   updateTopBar();
@@ -2593,6 +2664,7 @@ function _renderLogEntries() {
           <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;">
             <button class="btn btn-ghost btn-xs" onclick="toggleReclassify(${e.id})" id="reclass-btn-${e.id}" title="Reclassify activity">🔀</button>
             <button class="btn btn-ghost btn-xs" onclick="toggleNoteEdit(${e.id})" id="note-btn-${e.id}" title="Edit note">✏</button>
+            <button class="btn btn-ghost btn-xs" onclick="toggleDurationEdit(${e.id})" id="dur-btn-${e.id}" title="Edit duration">⏱</button>
             <button class="btn btn-red btn-xs" onclick="logDelete(${e.id})">🗑</button>
           </div>
         </div>
@@ -2605,6 +2677,39 @@ function _renderLogEntries() {
           <div style="display:flex;gap:6px;">
             <button class="btn btn-primary btn-xs" onclick="saveReclassify(${e.id})">Save</button>
             <button class="btn btn-ghost btn-xs" onclick="cancelReclassify(${e.id})">Cancel</button>
+          </div>
+        </div>
+        <div id="dur-edit-${e.id}" style="display:none;margin-top:8px;">
+          <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:6px;">Edit Duration</label>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <label style="font-size:11px;width:52px;flex-shrink:0;">Start</label>
+              <input type="time" step="1" id="dur-start-${e.id}"
+                value="${e.startTs ? new Date(e.startTs).toTimeString().slice(0,8) : ''}"
+                oninput="onDurStartChange(${e.id})"
+                style="flex:1;">
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <label style="font-size:11px;width:52px;flex-shrink:0;">End</label>
+              <input type="time" step="1" id="dur-end-${e.id}"
+                value="${e.endTs ? new Date(e.endTs).toTimeString().slice(0,8) : ''}"
+                oninput="onDurEndChange(${e.id})"
+                style="flex:1;">
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <label style="font-size:11px;width:52px;flex-shrink:0;">Duration</label>
+              <input type="time" step="1" id="dur-hms-${e.id}"
+                value="${secsToHMSInput(e.duration)}"
+                oninput="onDurHmsChange(${e.id})"
+                style="flex:1;">
+            </div>
+          </div>
+          <div style="font-size:11px;color:var(--text3);margin-top:4px;" id="dur-hint-${e.id}">
+            Editing duration recalculates end time. Editing start or end recalculates duration.
+          </div>
+          <div style="display:flex;gap:6px;margin-top:8px;">
+            <button class="btn btn-primary btn-xs" onclick="saveDurationEdit(${e.id})">Save</button>
+            <button class="btn btn-ghost btn-xs" onclick="cancelDurationEdit(${e.id})">Cancel</button>
           </div>
         </div>
         <div id="note-edit-${e.id}" style="display:none;margin-top:8px;">
@@ -2670,12 +2775,18 @@ function _renderLogEntries() {
 function toggleReclassify(id) {
   const panel  = document.getElementById(`reclass-edit-${id}`);
   const btn    = document.getElementById(`reclass-btn-${id}`);
-  // Close note editor if open — only one panel at a time per row
+  // Close other panels — only one open at a time per row
   const notePanel = document.getElementById(`note-edit-${id}`);
   const noteBtn   = document.getElementById(`note-btn-${id}`);
+  const durPanel  = document.getElementById(`dur-edit-${id}`);
+  const durBtn    = document.getElementById(`dur-btn-${id}`);
   if (notePanel && notePanel.style.display !== 'none') {
     notePanel.style.display = 'none';
     if (noteBtn) { noteBtn.textContent = '✏'; noteBtn.title = 'Edit note'; }
+  }
+  if (durPanel && durPanel.style.display !== 'none') {
+    durPanel.style.display = 'none';
+    if (durBtn) { durBtn.textContent = '⏱'; durBtn.title = 'Edit duration'; }
   }
   if (!panel) return;
   const opening = panel.style.display === 'none';
@@ -2730,12 +2841,18 @@ function cancelReclassify(id) {
 function toggleNoteEdit(id) {
   const panel = document.getElementById(`note-edit-${id}`);
   const btn   = document.getElementById(`note-btn-${id}`);
-  // Close reclassify editor if open — only one panel at a time per row
+  // Close other panels — only one open at a time per row
   const reclassPanel = document.getElementById(`reclass-edit-${id}`);
   const reclassBtn   = document.getElementById(`reclass-btn-${id}`);
+  const durPanel     = document.getElementById(`dur-edit-${id}`);
+  const durBtn       = document.getElementById(`dur-btn-${id}`);
   if (reclassPanel && reclassPanel.style.display !== 'none') {
     reclassPanel.style.display = 'none';
     if (reclassBtn) { reclassBtn.textContent = '🔀'; reclassBtn.title = 'Reclassify activity'; }
+  }
+  if (durPanel && durPanel.style.display !== 'none') {
+    durPanel.style.display = 'none';
+    if (durBtn) { durBtn.textContent = '⏱'; durBtn.title = 'Edit duration'; }
   }
   if (!panel) return;
   const opening = panel.style.display === 'none';
@@ -2783,6 +2900,148 @@ function cancelNoteEdit(id) {
   const btn   = document.getElementById(`note-btn-${id}`);
   if (panel) panel.style.display = 'none';
   if (btn)   { btn.textContent = '✏'; btn.title = 'Edit note'; }
+}
+
+function toggleDurationEdit(id) {
+  const panel = document.getElementById(`dur-edit-${id}`);
+  const btn   = document.getElementById(`dur-btn-${id}`);
+  // Close other panels
+  const notePanel   = document.getElementById(`note-edit-${id}`);
+  const noteBtn     = document.getElementById(`note-btn-${id}`);
+  const reclassPanel = document.getElementById(`reclass-edit-${id}`);
+  const reclassBtn   = document.getElementById(`reclass-btn-${id}`);
+  if (notePanel && notePanel.style.display !== 'none') {
+    notePanel.style.display = 'none';
+    if (noteBtn) { noteBtn.textContent = '✏'; noteBtn.title = 'Edit note'; }
+  }
+  if (reclassPanel && reclassPanel.style.display !== 'none') {
+    reclassPanel.style.display = 'none';
+    if (reclassBtn) { reclassBtn.textContent = '🔀'; reclassBtn.title = 'Reclassify activity'; }
+  }
+  if (!panel) return;
+  const opening = panel.style.display === 'none';
+  panel.style.display = opening ? 'block' : 'none';
+  btn.textContent = opening ? '✕' : '⏱';
+  btn.title = opening ? 'Cancel' : 'Edit duration';
+}
+
+// When start time changes — recalculate duration from start→end
+function onDurStartChange(id) {
+  const startEl = document.getElementById(`dur-start-${id}`);
+  const endEl   = document.getElementById(`dur-end-${id}`);
+  const hmsEl   = document.getElementById(`dur-hms-${id}`);
+  if (!startEl || !endEl || !hmsEl) return;
+  const startSecs = _timeStrToSecs(startEl.value);
+  const endSecs   = _timeStrToSecs(endEl.value);
+  if (startSecs === null || endSecs === null) return;
+  let diff = endSecs - startSecs;
+  if (diff < 0) diff += 86400; // crossed midnight
+  hmsEl.value = secsToHMSInput(diff);
+  _durHint(id, diff);
+}
+
+// When end time changes — recalculate duration from start→end
+function onDurEndChange(id) {
+  onDurStartChange(id); // same logic
+}
+
+// When HH:MM:SS duration changes — recalculate end time from start + duration
+function onDurHmsChange(id) {
+  const startEl = document.getElementById(`dur-start-${id}`);
+  const endEl   = document.getElementById(`dur-end-${id}`);
+  const hmsEl   = document.getElementById(`dur-hms-${id}`);
+  if (!startEl || !endEl || !hmsEl) return;
+  const startSecs = _timeStrToSecs(startEl.value);
+  const durSecs   = _timeStrToSecs(hmsEl.value);
+  if (startSecs === null || durSecs === null) return;
+  const endSecs   = (startSecs + durSecs) % 86400;
+  endEl.value = secsToHMSInput(endSecs);
+  _durHint(id, durSecs);
+}
+
+function _timeStrToSecs(str) {
+  if (!str) return null;
+  const parts = str.split(':').map(Number);
+  if (parts.length < 2) return null;
+  const h = parts[0] || 0, m = parts[1] || 0, s = parts[2] || 0;
+  return h * 3600 + m * 60 + s;
+}
+
+function _durHint(id, secs) {
+  const hint = document.getElementById(`dur-hint-${id}`);
+  if (hint && secs > 0) hint.textContent = `New duration: ${secsToStr(secs)}`;
+}
+
+function saveDurationEdit(id) {
+  const hmsEl   = document.getElementById(`dur-hms-${id}`);
+  const startEl = document.getElementById(`dur-start-${id}`);
+  const endEl   = document.getElementById(`dur-end-${id}`);
+  if (!hmsEl) return;
+  const newDur    = _timeStrToSecs(hmsEl.value);
+  const newStart  = _timeStrToSecs(startEl ? startEl.value : null);
+  const newEnd    = _timeStrToSecs(endEl   ? endEl.value   : null);
+  if (newDur === null || newDur <= 0) {
+    alert('Duration must be greater than zero.');
+    return;
+  }
+  const study = currentStudy();
+  if (!study) return;
+  const entry = study.entries.find(e => e.id === id);
+  if (!entry) return;
+
+  const oldDur = entry.duration;
+  entry.duration = newDur;
+
+  // Update timestamps if we have valid times
+  if (newStart !== null) {
+    const baseDate = new Date(entry.startTs || Date.now());
+    const newStartTs = new Date(baseDate);
+    newStartTs.setHours(Math.floor(newStart / 3600), Math.floor((newStart % 3600) / 60), newStart % 60, 0);
+    entry.startTs = newStartTs.getTime();
+    entry.start   = newStartTs.toTimeString().slice(0, 8);
+  }
+  if (newEnd !== null) {
+    const baseDate = new Date(entry.endTs || Date.now());
+    const newEndTs = new Date(baseDate);
+    newEndTs.setHours(Math.floor(newEnd / 3600), Math.floor((newEnd % 3600) / 60), newEnd % 60, 0);
+    // Handle midnight crossing
+    if (newEnd < (newStart || 0)) newEndTs.setDate(newEndTs.getDate() + 1);
+    entry.endTs = newEndTs.getTime();
+    entry.end   = newEndTs.toTimeString().slice(0, 8);
+  }
+
+  saveDb();
+
+  // Update the time display in place
+  const timesEl = document.querySelector(`#entry-row-${id} .entry-times`);
+  if (timesEl) {
+    const mode = db.settings.hourMode;
+    timesEl.textContent = `${displayTime(entry, 'start', mode)} → ${displayTime(entry, 'end', mode)} · ${secsToStr(entry.duration)}`;
+  }
+
+  // Close panel
+  const panel = document.getElementById(`dur-edit-${id}`);
+  const btn   = document.getElementById(`dur-btn-${id}`);
+  if (panel) panel.style.display = 'none';
+  if (btn)   { btn.textContent = '⏱'; btn.title = 'Edit duration'; }
+  showNotice(`Duration updated: ${secsToStr(oldDur)} → ${secsToStr(newDur)}`);
+}
+
+function cancelDurationEdit(id) {
+  const study = currentStudy();
+  const entry = study && study.entries.find(e => e.id === id);
+  if (entry) {
+    const hmsEl   = document.getElementById(`dur-hms-${id}`);
+    const startEl = document.getElementById(`dur-start-${id}`);
+    const endEl   = document.getElementById(`dur-end-${id}`);
+    if (hmsEl)   hmsEl.value   = secsToHMSInput(entry.duration);
+    if (startEl) startEl.value = entry.startTs ? new Date(entry.startTs).toTimeString().slice(0,8) : '';
+    if (endEl)   endEl.value   = entry.endTs   ? new Date(entry.endTs).toTimeString().slice(0,8)   : '';
+  }
+  const panel = document.getElementById(`dur-edit-${id}`);
+  const btn   = document.getElementById(`dur-btn-${id}`);
+  if (panel) panel.style.display = 'none';
+  if (btn)   { btn.textContent = '⏱'; btn.title = 'Edit duration'; }
 }
 
 function logSearch(val) {
@@ -4154,10 +4413,12 @@ function exportCsv() {
   const study = currentStudy();
   if (!study) { alert('No active study.'); return; }
   const mode = db.settings.hourMode;
-  const rows = [['Date','Activity','Start','End','Duration','Secs','Exception','Note']];
+  const rows = [['Date','Group','Activity','Start','End','Duration','Secs','Exception','Note']];
   study.entries.filter(e => !e.deletedAt).forEach(e => {
+    const grp = getActivityGroup(study, e.activity);
     rows.push([
       e.date,
+      grp ? grp.name : '',
       e.activity,
       displayTime(e, 'start', mode),
       displayTime(e, 'end', mode),
@@ -4567,6 +4828,8 @@ loadDb();
 })();
 
 render();
+// Seed the initial history entry so popstate always has a base state to return to
+history.replaceState({ tab: activeTab }, '', '');
 if (activeSessions.length > 0) startTimerInterval();
 
 // ===== SERVICE WORKER =====
