@@ -417,26 +417,139 @@
     margin-bottom: 6px;
   }
   .entry-row {
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-    padding: 10px 12px;
+    padding: 8px 10px;
     border-radius: var(--radius);
-    margin-bottom: 4px;
+    margin-bottom: 3px;
     background: var(--surface);
     border: 1px solid var(--border);
     border-left: 3px solid transparent;
     transition: border-color 0.12s;
   }
   .entry-row:hover { border-left-color: var(--accent); }
+  .entry-main-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+  }
   .entry-info { flex: 1; min-width: 0; }
   .entry-activity {
-    font-size: var(--base-font);
-    font-weight: 600;
+    font-family: var(--display);
+    font-size: clamp(14px, 3.5vw, 16px);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
-  .entry-times { font-size: var(--xs-font); color: var(--text3); font-family: var(--mono); margin-top: 2px; letter-spacing: 0.02em; }
-  .entry-note-preview { font-size: var(--xs-font); color: var(--text3); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-style: italic; }
-  .entry-badges { display: flex; gap: 4px; align-items: center; margin-top: 5px; flex-wrap: wrap; }
+  .entry-timestamp {
+    font-size: var(--xs-font);
+    color: var(--text3);
+    font-family: var(--mono);
+    margin-top: 2px;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .entry-duration {
+    font-size: var(--xs-font);
+    font-family: var(--mono);
+    font-weight: 600;
+    color: var(--text2);
+    margin-top: 1px;
+    letter-spacing: 0.04em;
+  }
+  .entry-group-line {
+    margin-top: 4px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+  .entry-note-preview {
+    font-size: var(--xs-font);
+    color: var(--text3);
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-style: italic;
+  }
+
+  /* Right column: action buttons + image thumbnail */
+  .entry-right-col {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 6px;
+    flex-shrink: 0;
+    align-self: stretch;
+  }
+
+  /* Corner thumbnail — bottom-right of entry */
+  .entry-thumb-corner {
+    position: relative;
+    width: 48px;
+    height: 48px;
+    border-radius: var(--radius);
+    overflow: hidden;
+    border: 1px solid var(--border);
+    cursor: pointer;
+    flex-shrink: 0;
+    background: var(--surface2);
+    transition: opacity 0.12s;
+  }
+  .entry-thumb-corner:hover { opacity: 0.85; }
+  .entry-thumb-corner img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .entry-thumb-count {
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+    background: rgba(0,0,0,0.6);
+    color: #fff;
+    font-size: 9px;
+    font-family: var(--mono);
+    font-weight: 700;
+    padding: 1px 4px;
+    border-radius: 2px;
+    line-height: 1.4;
+  }
+
+  /* Compact action button — single ⋯ that expands */
+  .entry-action-btn {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text3);
+    font-size: 14px;
+    line-height: 1;
+    padding: 3px 7px;
+    cursor: pointer;
+    flex-shrink: 0;
+    align-self: flex-start;
+    transition: background 0.1s, color 0.1s;
+    font-family: var(--mono);
+  }
+  .entry-action-btn:hover { background: var(--surface2); color: var(--text2); }
+  .entry-action-btn.open  { background: var(--surface2); color: var(--text); border-color: var(--text3); }
+
+  /* Expanded action panel */
+  .entry-actions-panel {
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--border);
+  }
 
   /* SUMMARY */
   .stat-grid {
@@ -1108,6 +1221,875 @@
   }
   .session-collapse-btn:hover { color: var(--text2); }
 
+  /* ── STICKY ACTIVE TIMERS TRAY ─────────────────────────────────────────── */
+  #live-tray {
+    position: sticky;
+    top: calc(var(--top-h) + var(--tab-h));
+    z-index: 90;
+    background: var(--surface);
+    border-bottom: 2px solid var(--border);
+    display: none; /* shown via JS when timers exist */
+  }
+  #live-tray.has-timers { display: block; }
+
+  .tray-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 5px var(--pad) 4px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface2);
+  }
+  .tray-header-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--text3);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .tray-add-odt {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 2px 8px;
+    font-size: 10px;
+    font-family: var(--mono);
+    color: var(--text2);
+    cursor: pointer;
+    letter-spacing: 0.04em;
+    transition: background 0.12s, color 0.12s;
+  }
+  .tray-add-odt:hover { background: var(--surface); color: var(--text); }
+
+  /* Tray item wrapper — block so detail panel sits below the flex row */
+  .tray-item {
+    border-bottom: 1px solid var(--border);
+  }
+  .tray-item:last-child { border-bottom: none; }
+  .tray-item > .tray-row { border-bottom: none; }
+
+  /* Detail panel inside a tray item */
+  .tray-detail {
+    padding: 8px var(--pad) 10px calc(var(--pad) + 14px);
+    background: var(--surface2);
+    border-top: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+  }
+  .tray-detail-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .tray-note-input {
+    flex: 1;
+    font-size: var(--sm-font);
+    font-family: var(--font);
+    padding: 6px 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    color: var(--text);
+    outline: none;
+    min-width: 0;
+  }
+  .tray-note-input:focus { border-color: var(--accent); }
+  .tray-exception-label {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: var(--xs-font);
+    color: var(--text2);
+    font-family: var(--mono);
+    cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .tray-exception-label input { width: 14px; height: 14px; cursor: pointer; }
+  .tray-odt-label-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .tray-odt-label-input {
+    flex: 1;
+    font-size: var(--sm-font);
+    font-family: var(--mono);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 5px 8px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    color: var(--text2);
+    outline: none;
+    min-width: 0;
+  }
+  .tray-odt-label-input:focus { border-color: var(--blue); }
+
+  /* Expand toggle button on each tray row */
+  .tray-expand-btn {
+    background: none;
+    border: none;
+    color: var(--text3);
+    font-size: 11px;
+    font-family: var(--mono);
+    cursor: pointer;
+    padding: 4px 5px;
+    border-radius: 3px;
+    line-height: 1;
+    flex-shrink: 0;
+    transition: color 0.12s, background 0.12s;
+  }
+  .tray-expand-btn:hover { color: var(--text2); background: var(--surface2); }
+  .tray-expand-btn.expanded { color: var(--accent); }
+
+  /* Each timer row in the tray */
+  .tray-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px var(--pad);
+    border-bottom: 1px solid var(--border);
+    min-height: 44px;
+    background: var(--surface);
+    transition: background 0.12s;
+  }
+  .tray-row:last-child { border-bottom: none; }
+  .tray-row.tray-paused { background: var(--amber-bg); }
+  .tray-row.tray-stopped { background: var(--blue-bg); }
+
+  .tray-indicator {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    background: var(--text3);
+  }
+  .tray-indicator.running {
+    background: var(--green);
+    animation: odt-blink 1.2s ease-in-out infinite;
+  }
+  .tray-indicator.odt-running { background: var(--blue); animation: odt-blink 1.2s ease-in-out infinite; }
+  .tray-indicator.paused  { background: var(--amber); animation: none; }
+
+  .tray-name {
+    flex: 1;
+    min-width: 0;
+    font-size: var(--sm-font);
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .tray-name-odt {
+    font-family: var(--mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text2);
+  }
+
+  .tray-clock {
+    font-family: var(--display);
+    font-size: clamp(16px, 4vw, 20px);
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: var(--green);
+    flex-shrink: 0;
+    min-width: 72px;
+    text-align: right;
+  }
+  .tray-clock.paused   { color: var(--amber); }
+  .tray-clock.odt-run  { color: var(--blue); }
+  .tray-clock.stopped  { color: var(--text3); }
+
+  .tray-btns {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+  .tray-btn {
+    border: none;
+    border-radius: 3px;
+    padding: 5px 10px;
+    font-size: 11px;
+    font-weight: 700;
+    font-family: var(--font);
+    cursor: pointer;
+    transition: opacity 0.12s, transform 0.1s;
+    white-space: nowrap;
+  }
+  .tray-btn:active { transform: scale(0.95); }
+  .tray-btn-pause  { background: var(--amber-bg); color: var(--amber); }
+  .tray-btn-resume { background: var(--green-bg);  color: var(--green); }
+  .tray-btn-save   { background: var(--text);      color: var(--bg); }
+  .tray-btn-stop   { background: var(--surface2);  color: var(--text2); border: 1px solid var(--border); }
+  .tray-btn-assign { background: var(--blue-bg);   color: var(--blue);  border: 1px solid var(--blue); font-size:10px; }
+
+  /* Inline assign row (ODT stopped state inside tray) */
+  .tray-assign-row {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    padding: 6px var(--pad) 8px;
+    background: var(--blue-bg);
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+  }
+  .tray-assign-row select {
+    flex: 1;
+    min-width: 120px;
+    font-size: 12px;
+    padding: 5px 8px;
+    background: var(--surface);
+  }
+
+  /* On desktop the tray sticks below just the top-bar (sidebar takes tab-bar place) */
+  @media (min-width: 900px) {
+    #live-tray {
+      top: var(--top-h);
+    }
+  }
+
+  /* ── LIVE TAB REDESIGN ─────────────────────────────────────────────────── */
+
+  /* Section headers */
+  .live-section-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 12px 0 6px;
+  }
+  .live-section-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+  }
+  .live-add-btn {
+    margin-left: auto;
+    background: var(--blue);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius);
+    padding: 4px 12px;
+    font-size: 11px;
+    font-weight: 700;
+    font-family: var(--font);
+    cursor: pointer;
+    letter-spacing: 0.03em;
+    transition: opacity 0.12s, transform 0.1s;
+  }
+  .live-add-btn:hover  { opacity: 0.85; }
+  .live-add-btn:active { transform: scale(0.97); }
+
+  /* Empty hint text */
+  .live-empty-hint {
+    font-size: var(--sm-font);
+    color: var(--text3);
+    padding: 10px 0 4px;
+    font-family: var(--mono);
+    letter-spacing: 0.02em;
+  }
+
+  /* Activity chips */
+  .live-chips-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 7px;
+  }
+  .live-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 2px;
+  }
+  .activity-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 7px 13px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--chip-color, var(--text));
+    font-size: var(--sm-font);
+    font-family: var(--font);
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.12s, border-color 0.12s, transform 0.1s;
+    white-space: nowrap;
+  }
+  .activity-chip:hover  { background: var(--border); border-color: var(--text3); }
+  .activity-chip:active { transform: scale(0.96); }
+  .activity-chip.chip-running {
+    background: var(--green-bg);
+    border-color: var(--green);
+    color: var(--green);
+  }
+  .activity-chip.chip-qa {
+    border-style: dashed;
+    font-weight: 500;
+    color: var(--text2);
+  }
+  .chip-badge {
+    font-family: var(--mono);
+    font-size: 10px;
+    background: var(--blue-bg);
+    color: var(--blue);
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-weight: 700;
+  }
+
+  /* Group label above a chip row */
+  .chip-group-label {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin: 8px 0 4px;
+  }
+  .chip-group-label:first-child { margin-top: 0; }
+  .chip-group-dot {
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* Visibility button on card header */
+  .chip-vis-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 4px 10px;
+    font-size: 11px;
+    font-family: var(--mono);
+    color: var(--text2);
+    cursor: pointer;
+    letter-spacing: 0.03em;
+    transition: background 0.12s, color 0.12s, border-color 0.12s;
+  }
+  .chip-vis-btn:hover { background: var(--surface2); color: var(--text); border-color: var(--text3); }
+  .chip-hidden-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--amber);
+    color: #fff;
+    font-size: 9px;
+    font-weight: 700;
+    border-radius: 10px;
+    padding: 0 5px;
+    min-width: 16px;
+    height: 16px;
+  }
+
+  /* Visibility popup overlay + bottom sheet */
+  .chip-vis-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+    z-index: 500;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+  }
+  @media (min-width: 520px) {
+    .chip-vis-overlay { align-items: center; }
+  }
+  .chip-vis-popup {
+    background: var(--surface);
+    border-radius: 12px 12px 0 0;
+    width: 100%;
+    max-width: 480px;
+    max-height: 72vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 -4px 32px rgba(0,0,0,0.2);
+    overflow: hidden;
+  }
+  @media (min-width: 520px) {
+    .chip-vis-popup { border-radius: 10px; max-height: 80vh; }
+  }
+  .chip-vis-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px 12px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    background: var(--surface2);
+  }
+  .chip-vis-title {
+    font-family: var(--display);
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: var(--text);
+  }
+  .chip-vis-reset {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 4px 10px;
+    font-size: 11px;
+    font-family: var(--mono);
+    color: var(--text2);
+    cursor: pointer;
+    transition: background 0.12s;
+  }
+  .chip-vis-reset:hover { background: var(--surface); }
+  .chip-vis-close {
+    background: none;
+    border: none;
+    font-size: 18px;
+    color: var(--text3);
+    cursor: pointer;
+    padding: 2px 6px;
+    line-height: 1;
+    transition: color 0.12s;
+  }
+  .chip-vis-close:hover { color: var(--text); }
+  .chip-vis-body { overflow-y: auto; flex: 1; padding: 6px 0 20px; }
+  .chip-vis-section { margin-bottom: 2px; }
+  .chip-vis-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 11px 16px;
+    cursor: pointer;
+    min-height: 46px;
+    gap: 12px;
+    transition: background 0.1s;
+    user-select: none;
+  }
+  .chip-vis-row:hover  { background: var(--surface2); }
+  .chip-vis-row:active { background: var(--border); }
+  .chip-vis-group-row {
+    border-top: 1px solid var(--border);
+    margin-top: 4px;
+  }
+  .chip-vis-group-row:first-child { border-top: none; margin-top: 0; }
+  .chip-vis-row-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--text);
+    flex: 1;
+    min-width: 0;
+  }
+  .chip-vis-indent { padding-left: 20px; color: var(--text2); font-size: 12px; }
+  .chip-vis-toggle {
+    flex-shrink: 0;
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text3);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 3px 9px;
+    pointer-events: none;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+  }
+  .chip-vis-toggle.on {
+    background: var(--green-bg);
+    color: var(--green);
+    border-color: var(--green);
+  }
+
+  /* Section header inside the visibility popup separating QS from QA */
+  .chip-vis-mode-header {
+    padding: 9px 16px;
+    font-family: var(--mono);
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--text3);
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    border-top: 1px solid var(--border);
+    transition: background 0.12s, color 0.12s;
+  }
+  .chip-vis-mode-header:hover { background: var(--border); color: var(--text2); }
+
+  /* Popup tab bar */
+  .chip-vis-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface2);
+    flex-shrink: 0;
+  }
+  .chip-vis-tab {
+    flex: 1;
+    padding: 9px 0;
+    font-size: 12px;
+    font-family: var(--mono);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--text3);
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    transition: color 0.12s, border-color 0.12s;
+  }
+  .chip-vis-tab.active { color: var(--text); border-bottom-color: var(--accent); }
+
+  /* Arrange move buttons */
+  .chip-arr-btns {
+    display: flex;
+    gap: 3px;
+    flex-shrink: 0;
+  }
+  .chip-arr-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    cursor: pointer;
+    color: var(--text2);
+    transition: background 0.1s, color 0.1s;
+    line-height: 1;
+    padding: 0;
+  }
+  .chip-arr-btn:hover  { background: var(--border); color: var(--text); }
+  .chip-arr-btn:active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .chip-arr-btn:disabled { opacity: 0.25; cursor: default; pointer-events: none; }
+
+  /* Non-clickable arrange row (clicking does nothing — use buttons) */
+  .chip-vis-row.arr-row { cursor: default; }
+  .chip-vis-row.arr-row:hover  { background: transparent; }
+  .chip-vis-row.arr-row:active { background: transparent; }
+
+  /* New-activity input row */
+  .live-new-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .live-new-input {
+    flex: 1;
+    padding: 9px 12px;
+    font-size: var(--sm-font);
+  }
+
+  /* Inline link button */
+  .btn-link {
+    background: none;
+    border: none;
+    color: var(--accent);
+    font-size: var(--xs-font);
+    font-family: var(--mono);
+    cursor: pointer;
+    padding: 0;
+    letter-spacing: 0.04em;
+    text-decoration: underline dotted;
+    text-underline-offset: 2px;
+  }
+  .btn-link:hover { opacity: 0.75; }
+
+  /* ── Unified session / ODT card ─────────────────────────────────────────── */
+  .sess-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--green);
+    border-radius: var(--radius);
+    padding: 14px var(--card-pad) 12px;
+    margin-bottom: 8px;
+    transition: border-left-color 0.2s;
+  }
+  .sess-card.sess-paused  { border-left-color: var(--amber); }
+  .sess-card.odt-running  { border-left-color: var(--blue); }
+  .sess-card.odt-paused   { border-left-color: var(--amber); }
+
+  /* Top row: name/meta left, timer right */
+  .sess-top-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 10px;
+  }
+  .sess-name-col { flex: 1; min-width: 0; }
+  .sess-name {
+    font-family: var(--display);
+    font-size: clamp(17px, 4vw, 21px);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    line-height: 1.1;
+  }
+  .sess-note-preview {
+    font-size: 11px;
+    color: var(--text3);
+    font-style: italic;
+    margin-top: 2px;
+  }
+  .sess-start-time {
+    font-family: var(--mono);
+    font-size: var(--xs-font);
+    color: var(--text3);
+    margin-top: 3px;
+  }
+  .sess-timer {
+    font-family: var(--display);
+    font-size: clamp(28px, 7vw, 40px);
+    font-weight: 700;
+    color: var(--green);
+    letter-spacing: 2px;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+  .sess-timer.paused { color: var(--amber); }
+  .sess-collapse-btn {
+    background: none;
+    border: none;
+    color: var(--text3);
+    cursor: pointer;
+    font-size: 12px;
+    padding: 4px 6px;
+    border-radius: 3px;
+    font-family: var(--mono);
+    flex-shrink: 0;
+    align-self: flex-start;
+    transition: color 0.12s;
+  }
+  .sess-collapse-btn:hover { color: var(--text2); }
+
+  /* Action buttons — larger, easier to tap */
+  .sess-actions {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-bottom: 0;
+  }
+  .sess-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 16px;
+    border-radius: var(--radius);
+    border: none;
+    cursor: pointer;
+    font-family: var(--font);
+    font-size: var(--sm-font);
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+    transition: opacity 0.12s, transform 0.1s;
+  }
+  .sess-btn:hover  { opacity: 0.85; }
+  .sess-btn:active { transform: scale(0.97); }
+  .sess-btn-pause   { background: var(--amber-bg); color: var(--amber); border: 1px solid var(--amber); }
+  .sess-btn-resume  { background: var(--green-bg);  color: var(--green);  border: 1px solid var(--green); }
+  .sess-btn-save    { background: var(--text);       color: var(--bg); }
+  .sess-btn-danger  { background: transparent; color: var(--text3); border: 1px solid var(--border); }
+  .sess-btn-danger:hover { background: var(--red-bg); color: var(--red); border-color: var(--red); }
+  .sess-btn-secondary { background: var(--surface2); color: var(--text2); border: 1px solid var(--border); }
+
+  /* Detail section (note + exception) */
+  .sess-detail-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-top: 10px;
+  }
+  .sess-note-input { flex: 1; font-size: var(--sm-font); padding: 7px 10px; }
+  .sess-exception-label {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: var(--xs-font);
+    color: var(--text2);
+    cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .sess-exception-label input { width: 14px; height: 14px; cursor: pointer; }
+
+  /* ODT label input */
+  .odt-label-input {
+    background: transparent;
+    border: none;
+    border-bottom: 1px dashed var(--border);
+    padding: 1px 4px;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text2);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    width: 110px;
+    outline: none;
+    margin-top: 2px;
+  }
+  .odt-label-input:focus { border-bottom-color: var(--accent); }
+
+  /* ODT save row */
+  .sess-save-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+    flex-wrap: wrap;
+  }
+  .sess-save-select { flex: 1; min-width: 140px; font-size: var(--sm-font); padding: 7px 10px; }
+
+  /* ── ODT CSS (keep pulse + top-bar accent for ODT cards) ── */
+  .odt-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: var(--card-pad);
+    margin-bottom: 10px;
+    position: relative;
+    overflow: hidden;
+  }
+  .odt-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--blue), var(--accent2));
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .odt-card.odt-running::before { opacity: 1; }
+  .odt-card.odt-paused::before {
+    background: linear-gradient(90deg, var(--amber), var(--amber));
+    opacity: 1;
+  }
+  .odt-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  .odt-title-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .odt-pulse {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--text3);
+    flex-shrink: 0;
+    transition: background 0.2s;
+  }
+  .odt-pulse.running {
+    background: var(--green);
+    animation: odt-blink 1.2s ease-in-out infinite;
+  }
+  .odt-pulse.paused { background: var(--amber); animation: none; }
+  @keyframes odt-blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+  .odt-display-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  .odt-time {
+    font-family: var(--display);
+    font-size: clamp(36px, 10vw, 56px);
+    font-weight: 700;
+    letter-spacing: 3px;
+    line-height: 1;
+    color: var(--text3);
+    transition: color 0.25s;
+    font-variant-numeric: tabular-nums;
+  }
+  .odt-time.running { color: var(--blue); }
+  .odt-time.paused  { color: var(--amber); }
+  .odt-controls {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .odt-btn-start {
+    background: var(--blue);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius);
+    padding: 10px 20px;
+    font-size: var(--sm-font);
+    font-weight: 700;
+    font-family: var(--font);
+    cursor: pointer;
+    letter-spacing: 0.04em;
+    transition: opacity 0.12s, transform 0.1s;
+    display: inline-flex; align-items: center; gap: 5px;
+  }
+  .odt-btn-start:hover { opacity: 0.85; }
+  .odt-btn-start:active { transform: scale(0.97); }
+  .odt-save-row {
+    border-top: 1px solid var(--border);
+    padding-top: 10px;
+    margin-top: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .odt-save-hint {
+    font-size: var(--xs-font);
+    color: var(--text3);
+    font-family: var(--mono);
+    letter-spacing: 0.04em;
+  }
+  .odt-save-controls {
+    display: flex;
+    gap: 6px;
+    align-items: flex-end;
+    flex-wrap: wrap;
+  }
+  .odt-save-controls select {
+    flex: 1;
+    min-width: 120px;
+    font-size: var(--sm-font);
+    padding: 7px 10px;
+  }
+
   /* ACTIVITY COLOUR SWATCH in Manage */
   .act-color-dot {
     width: 14px;
@@ -1205,9 +2187,16 @@
       <div id="top-bar-title">Time Study V2</div>
       <div id="top-bar-sub">No study selected</div>
     </div>
-    <button id="profile-chip" onclick="openProfileModal()">Profile</button>
+    <button id="profile-chip" onclick="toggleContextPanel()" title="Profile & Studies">
+      <span id="profile-chip-label">Profile</span> ▾
+    </button>
   </div>
   <div id="storage-warn">⚠ Storage nearly full. Export data to free space.</div>
+  <!-- Profile + Studies context panel -->
+  <div id="context-panel" style="display:none;position:fixed;top:var(--top-h);left:0;right:0;
+    z-index:200;background:var(--surface);border-bottom:2px solid var(--accent);
+    box-shadow:0 4px 24px rgba(0,0,0,0.15);max-height:70vh;overflow-y:auto;">
+  </div>
   <div id="main-layout">
   <div id="tab-bar">
     <button class="tab-btn active" onclick="switchTab('live')">▶ Live</button>
@@ -1217,9 +2206,10 @@
     <button class="tab-btn" onclick="switchTab('charts')">📈 Charts</button>
     <button class="tab-btn" onclick="switchTab('notes')">📝 Notes</button>
     <button class="tab-btn" onclick="switchTab('manage')">⚙ Manage</button>
-    <button class="tab-btn" onclick="switchTab('studies')">📁 Studies</button>
     <button class="tab-btn" onclick="switchTab('settings')">⚙ Settings</button>
   </div>
+  <!-- Sticky running-timers tray — rendered by renderLiveTray() -->
+  <div id="live-tray"></div>
   <div id="content"></div>
   </div><!-- /#main-layout -->
 </div>
@@ -1276,6 +2266,9 @@
 // ===== GLOBALS =====
 let db = null;
 let activeSessions = []; // [{id, activityName, startTs, paused, pausedAt, totalPausedMs, note, exception}]
+// On-demand (unassigned) timers — array so multiple can run simultaneously
+// Each: { id, label, running, startTs, totalMs, showSave }
+let onDemandTimers = [];
 let timerInterval = null;
 let activeTab = 'live';
 let notesDebounce = null;
@@ -1518,29 +2511,38 @@ function startTimerInterval() {
 }
 
 function stopTimerInterval() {
-  clearInterval(timerInterval);
-  timerInterval = null;
+  const anyOdtRunning = onDemandTimers.some(o => o.running);
+  if (activeSessions.length === 0 && !anyOdtRunning) {
+    clearInterval(timerInterval);
+    timerInterval = null;
+  }
 }
 
 function tickTimers() {
   if (activeTab !== 'live') return;
-  // If any input/textarea is focused, only update the timer digits in-place
-  // — never rebuild the DOM while the keyboard is open, as it dismisses it.
   const focused = document.activeElement;
-  const keyboardOpen = focused && (focused.tagName === 'INPUT' || focused.tagName === 'TEXTAREA' || focused.tagName === 'SELECT');
+  const keyboardOpen = (focused && (focused.tagName === 'INPUT' || focused.tagName === 'TEXTAREA' || focused.tagName === 'SELECT'))
+                    || window._trayInputFocused;
   if (keyboardOpen) {
     tickTimersInPlace();
   } else {
-    renderLive();
+    renderLiveTray();
+    activeSessions.forEach(s => {
+      const el = document.getElementById('timer-' + s.id);
+      if (el) el.textContent = secsToStr(getElapsed(s));
+    });
   }
 }
 
 // Update only the timer display spans without touching the rest of the DOM
 function tickTimersInPlace() {
+  // Tick main content timers (legacy — session cards no longer in content, but kept safe)
   activeSessions.forEach(s => {
     const el = document.getElementById('timer-' + s.id);
     if (el) el.textContent = secsToStr(getElapsed(s));
   });
+  // Tick the sticky tray in-place
+  tickTrayInPlace();
 }
 
 document.addEventListener('visibilitychange', () => {
@@ -1751,6 +2753,116 @@ function quickStartTimer(activityName) {
   startSession(activityName);
 }
 
+// ===== ON-DEMAND TIMERS (multi-instance) =====
+function odtGetElapsedMs(odt) {
+  if (odt.running) return odt.totalMs + (Date.now() - odt.startTs);
+  return odt.totalMs;
+}
+
+function odtGetDisplay(odt) {
+  return secsToStr(Math.floor(odtGetElapsedMs(odt) / 1000));
+}
+
+function odtAdd() {
+  haptic(40);
+  const id = generateId();
+  const num = onDemandTimers.length + 1;
+  onDemandTimers.push({
+    id,
+    label: `Timer ${num}`,
+    running: true,
+    startTs: Date.now(),
+    totalMs: 0,
+    showSave: false
+  });
+  startTimerInterval();
+  renderLive();
+}
+
+function odtPause(id) {
+  const odt = onDemandTimers.find(o => o.id === id);
+  if (!odt || !odt.running) return;
+  haptic(30);
+  odt.totalMs += Date.now() - odt.startTs;
+  odt.running = false;
+  odt.startTs = null;
+  stopTimerInterval();
+  renderLive();
+}
+
+function odtResume(id) {
+  const odt = onDemandTimers.find(o => o.id === id);
+  if (!odt || odt.running) return;
+  haptic(40);
+  odt.running = true;
+  odt.startTs = Date.now();
+  startTimerInterval();
+  renderLive();
+}
+
+function odtStop(id) {
+  const odt = onDemandTimers.find(o => o.id === id);
+  if (!odt) return;
+  haptic([40, 60, 40]);
+  if (odt.running) {
+    odt.totalMs += Date.now() - odt.startTs;
+    odt.running = false;
+    odt.startTs = null;
+  }
+  odt.showSave = true;
+  stopTimerInterval();
+  renderLive();
+}
+
+function odtDiscard(id) {
+  haptic(20);
+  onDemandTimers = onDemandTimers.filter(o => o.id !== id);
+  stopTimerInterval();
+  renderLive();
+}
+
+function odtRenameLabel(id, value) {
+  const odt = onDemandTimers.find(o => o.id === id);
+  if (odt) odt.label = value || odt.label;
+}
+
+function odtSaveAs(id) {
+  const odt = onDemandTimers.find(o => o.id === id);
+  if (!odt) return;
+  const sel = document.getElementById('odt-save-select-' + id);
+  const activityName = sel ? sel.value.trim() : '';
+  const study = currentStudy();
+  if (!study) { alert('No active study.'); return; }
+  if (!activityName) { showNotice('Select an activity to save this time to.', 'amber'); return; }
+
+  const durationSecs = Math.floor(odtGetElapsedMs(odt) / 1000);
+  if (durationSecs < 1) { showNotice('Timer has no recorded time.', 'amber'); return; }
+
+  const endTs   = Date.now();
+  const startTs = endTs - odt.totalMs;
+
+  if (!study.activities.includes(activityName)) study.activities.push(activityName);
+
+  study.entries.push({
+    id: Date.now(),
+    activity: activityName,
+    date: todayStr(),
+    start: formatTime(startTs, '24'),
+    end: formatTime(endTs, '24'),
+    startTs,
+    endTs,
+    duration: durationSecs,
+    note: '',
+    exception: false,
+    images: [],
+    deletedAt: null
+  });
+  saveDb();
+  showNotice(`✓ Saved "${activityName}" — ${secsToStr(durationSecs)}`);
+  onDemandTimers = onDemandTimers.filter(o => o.id !== id);
+  renderLive();
+}
+
 function quickAddEntry(activityName) {
   const study = currentStudy();
   const std = study.manualStd[activityName] || getAutoAvg(study, activityName);
@@ -1781,18 +2893,23 @@ function quickAddEntry(activityName) {
 // ===== TAB SWITCHING =====
 function switchTab(tab) {
   activeTab = tab;
-  // Remove Log tab FAB when leaving the log
+  closeContextPanel();
   const fab = document.getElementById('bin-fab-wrap');
   if (fab) fab.remove();
-  // Close notes panel when switching tabs; update FAB visibility
   _closeNotesPanel();
   _updateNotesFabVisibility();
   document.querySelectorAll('.tab-btn').forEach((b, i) => {
-    const tabs = ['live','manual','log','summary','charts','notes','manage','studies','settings'];
+    const tabs = ['live','manual','log','summary','charts','notes','manage','settings'];
     b.classList.toggle('active', tabs[i] === tab);
   });
-  // Push a history entry so the browser back button navigates between tabs.
-  // Use replaceState for the very first tab to avoid a dead initial entry.
+  // Hide tray when not on live tab
+  const tray = document.getElementById('live-tray');
+  if (tray) {
+    if (tab !== 'live') {
+      tray.className = '';
+      tray.innerHTML = '';
+    }
+  }
   const state = { tab };
   if (history.state && history.state.tab) {
     history.pushState(state, '', '');
@@ -1818,7 +2935,7 @@ window.addEventListener('popstate', e => {
     _closeNotesPanel();
     _updateNotesFabVisibility();
     document.querySelectorAll('.tab-btn').forEach((b, i) => {
-      const tabs = ['live','manual','log','summary','charts','notes','manage','studies','settings'];
+      const tabs = ['live','manual','log','summary','charts','notes','manage','settings'];
       b.classList.toggle('active', tabs[i] === e.state.tab);
     });
     render();
@@ -1876,7 +2993,7 @@ function render() {
     charts: renderCharts,
     notes: renderNotes,
     manage: renderManage,
-    studies: renderStudies,
+    studies: () => { switchTab('live'); toggleContextPanel(); }, // legacy redirect
     settings: renderSettings
   };
   (tabs[activeTab] || renderLive)();
@@ -1885,189 +3002,1088 @@ function render() {
 function updateTopBar() {
   const p = currentProfile();
   const s = currentStudy();
-  document.getElementById('profile-chip').textContent = p ? p.name : 'Profile';
   document.getElementById('top-bar-sub').textContent = s ? `${s.name}  ·  ${s.date}` : 'No study selected';
+  const chipLabel = document.getElementById('profile-chip-label');
+  if (chipLabel) chipLabel.textContent = p ? p.name : 'Profile';
 }
 
 // ===== LIVE TAB =====
-function renderLive() {
-  const study = currentStudy();
-  const activities = study ? study.activities : [];
-  const mode = db.settings.hourMode;
 
-  let html = `<div class="card">
-    <div class="card-title">Start New Session</div>
-    <div class="form-row">
-      <div class="form-group">
-        <label>Activity</label>
-        <select id="live-act-select">
-          <option value="">-- Select --</option>
-          ${activities.map(a => `<option value="${esc(a)}">${esc(a)}</option>`).join('')}
-        </select>
-      </div>
-      <div style="flex-shrink:0;margin-bottom:0;display:flex;align-items:flex-end;">
-        <button class="btn btn-green btn-sm" onclick="liveStart()">▶ Start</button>
-      </div>
-    </div>
-    <div class="form-row mt8" style="align-items:flex-end">
-      <div class="form-group" style="flex:1">
-        <label>New Activity</label>
-        <input id="live-new-act" placeholder="Activity name" type="text">
-      </div>
-      <div style="flex-shrink:0;display:flex;align-items:flex-end;">
-        <button class="btn btn-ghost btn-sm" onclick="liveStartNew()">+ New</button>
-      </div>
-    </div>
+// Renders the sticky tray above #content — called every tick and on state changes
+function renderLiveTray() {
+  const tray = document.getElementById('live-tray');
+  if (!tray) return;
+
+  if (activeTab !== 'live') {
+    tray.className = '';
+    tray.innerHTML = '';
+    return;
+  }
+
+  const study      = currentStudy();
+  const activities = study ? study.activities : [];
+  const mode       = db.settings.hourMode;
+  const totalCount = activeSessions.length + onDemandTimers.length;
+
+  tray.className = 'has-timers';
+
+  const runningCount = activeSessions.filter(s => !s.paused).length
+                     + onDemandTimers.filter(o => o.running).length;
+
+  const headerLabel = totalCount === 0
+    ? 'No timers running'
+    : `${totalCount} timer${totalCount !== 1 ? 's' : ''} active`;
+
+  if (!window._trayExpanded) window._trayExpanded = new Set();
+  const expanded = window._trayExpanded;
+
+  let html = `
+  <div class="tray-header">
+    <span class="tray-header-label">
+      ${totalCount > 0 ? `<span class="tray-indicator ${runningCount > 0 ? 'running' : 'paused'}"></span>` : ''}
+      ${headerLabel}
+    </span>
+    <button class="tray-add-odt" onclick="odtAdd()">+ On-Demand</button>
   </div>`;
 
-  // ── Quick Start Timer card — one tap starts a live timer for any activity ──
-  if (activities.length > 0) {
-    const qsPinned  = study ? study.quickStartPinned : null;
-    const visible   = qsPinned === null
-      ? activities
-      : activities.filter(a => qsPinned.includes(a));
+  // ── Activity sessions ──
+  activeSessions.forEach(s => {
+    const isPaused   = s.paused;
+    const isExpanded = expanded.has(s.id);
+    const elapsed    = getElapsed(s);
+    const actColor   = getActivityColor(study, s.activityName);
+    const nameStyle  = actColor ? `color:${actColor};` : '';
+    const indClass   = isPaused ? 'paused' : 'running';
+    const clockClass = isPaused ? 'paused' : '';
+    const rowClass   = isPaused ? 'tray-paused' : '';
 
-    html += `<div class="card">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-        <div class="card-title" style="margin:0;">Quick Start Timer</div>
-        <button class="btn btn-ghost btn-sm" onclick="toggleQsEdit()" id="qs-edit-btn"
-          style="font-size:11px;padding:3px 9px;">⚙ Edit</button>
-      </div>
-
-      <div id="qs-edit-panel" style="display:none;margin-bottom:10px;">
-        <div style="font-size:12px;color:var(--text2);margin-bottom:6px;">Select which activities appear here:</div>
-        <div style="display:flex;flex-direction:column;gap:4px;" id="qs-checklist">
-          ${activities.map(a => {
-            const checked = qsPinned === null || qsPinned.includes(a);
-            return `<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;">
-              <input type="checkbox" ${checked ? 'checked' : ''} onchange="toggleQsPin('${esc(a)}',this.checked)"
-                style="width:16px;height:16px;cursor:pointer;">
-              <span>${esc(a)}</span>
-            </label>`;
-          }).join('')}
+    html += `<div class="tray-item">
+      <div class="tray-row ${rowClass}">
+        <span class="tray-indicator ${indClass}"></span>
+        <span class="tray-name" style="${nameStyle}">${esc(s.activityName)}</span>
+        <span class="tray-clock ${clockClass}" id="tray-timer-${s.id}">${secsToStr(elapsed)}</span>
+        <div class="tray-btns">
+          <button class="tray-expand-btn ${isExpanded ? 'expanded' : ''}"
+            onclick="toggleTrayExpand('${s.id}')" title="${isExpanded ? 'Collapse' : 'Add note / details'}">✎</button>
+          ${isPaused
+            ? `<button class="tray-btn tray-btn-resume" onclick="resumeSession('${s.id}')">▶</button>`
+            : `<button class="tray-btn tray-btn-pause"  onclick="pauseSession('${s.id}')">⏸</button>`}
+          <button class="tray-btn tray-btn-save" onclick="stopAndSave('${s.id}')">⏹ Save</button>
+          <button class="tray-btn tray-btn-stop" onclick="discardSession('${s.id}')" title="Discard">✕</button>
         </div>
-        <button class="btn btn-ghost btn-sm" style="margin-top:8px;font-size:11px;" onclick="resetQsPins()">Reset to All</button>
       </div>
+      ${isExpanded ? `
+      <div class="tray-detail">
+        <div class="tray-detail-row">
+          <input class="tray-note-input" type="text"
+            placeholder="Add note…"
+            value="${esc(s.note)}"
+            oninput="sessionNote('${s.id}', this.value)"
+            onfocus="window._trayInputFocused=true"
+            onblur="window._trayInputFocused=false">
+          <label class="tray-exception-label">
+            <input type="checkbox" ${s.exception ? 'checked' : ''}
+              onchange="sessionToggleException('${s.id}', this.checked)">
+            Exception
+          </label>
+        </div>
+      </div>` : ''}
+    </div>`;
+  });
 
-      <div style="display:flex;flex-wrap:wrap;gap:6px;" id="qs-buttons">
-        ${visible.length > 0
-          ? visible.map(a => {
-              const isRunning = activeSessions.some(s => s.activityName === a && !s.paused);
-              const aColor    = getActivityColor(study, a);
-              const btnStyle  = aColor
-                ? `border-left:3px solid ${aColor};${isRunning ? '' : `color:${aColor};`}`
-                : '';
-              return `<button
-                class="btn btn-sm ${isRunning ? 'btn-green' : 'btn-ghost'}"
-                style="${btnStyle}"
-                onclick="quickStartTimer('${esc(a)}')"
-                title="${isRunning ? 'Already running' : 'Start timer for ' + esc(a)}">
-                ${isRunning ? '▶' : '▷'} ${esc(a)}
-              </button>`;
-            }).join('')
-          : `<span style="font-size:13px;color:var(--text3);">No activities selected — tap ⚙ Edit to choose.</span>`
-        }
+  // ── On-demand timers ──
+  onDemandTimers.forEach(odt => {
+    const display    = odtGetDisplay(odt);
+    const isRunning  = odt.running;
+    const isStopped  = odt.showSave;
+    const isExpanded = expanded.has(odt.id);
+    const indClass   = isRunning ? 'odt-running' : 'paused';
+    const clockClass = isStopped ? 'stopped' : isRunning ? 'odt-run' : 'paused';
+    const rowClass   = isStopped ? 'tray-stopped' : (!isRunning ? 'tray-paused' : '');
+
+    html += `<div class="tray-item">
+      <div class="tray-row ${rowClass}">
+        <span class="tray-indicator ${indClass}"></span>
+        <span class="tray-name tray-name-odt">${esc(odt.label)}</span>
+        <span class="tray-clock ${clockClass}" id="tray-odt-${odt.id}">${display}</span>
+        <div class="tray-btns">
+          <button class="tray-expand-btn ${isExpanded ? 'expanded' : ''}"
+            onclick="toggleTrayExpand('${odt.id}')" title="${isExpanded ? 'Collapse' : 'Rename timer'}">✎</button>
+          ${isStopped ? '' : isRunning
+            ? `<button class="tray-btn tray-btn-pause" onclick="odtPause('${odt.id}')">⏸</button>`
+            : `<button class="tray-btn tray-btn-resume" onclick="odtResume('${odt.id}')">▶</button>`}
+          ${isStopped
+            ? `<button class="tray-btn tray-btn-assign" onclick="odtToggleTrayAssign('${odt.id}')">💾 Assign…</button>
+               <button class="tray-btn tray-btn-stop"   onclick="odtDiscard('${odt.id}')" title="Discard">✕</button>`
+            : `<button class="tray-btn tray-btn-stop"   onclick="odtStop('${odt.id}')">⏹ Stop</button>
+               <button class="tray-btn tray-btn-stop"   onclick="odtDiscard('${odt.id}')" title="Discard">✕</button>`}
+        </div>
+      </div>
+      ${isExpanded ? `
+      <div class="tray-detail">
+        <div class="tray-odt-label-row">
+          <span style="font-size:10px;font-family:var(--mono);color:var(--text3);flex-shrink:0;">Label</span>
+          <input class="tray-odt-label-input" type="text"
+            value="${esc(odt.label)}"
+            oninput="odtRenameLabel('${odt.id}', this.value)"
+            onfocus="window._trayInputFocused=true"
+            onblur="window._trayInputFocused=false"
+            placeholder="Timer name…">
+        </div>
+      </div>` : ''}
+      ${isStopped && window._odtTrayAssignOpen && window._odtTrayAssignOpen.has(odt.id) ? `
+      <div class="tray-assign-row" id="tray-assign-${odt.id}">
+        <select id="odt-save-select-${odt.id}">
+          <option value="">— select activity —</option>
+          ${activities.map(a => `<option value="${esc(a)}">${esc(a)}</option>`).join('')}
+        </select>
+        <button class="tray-btn tray-btn-save" onclick="odtSaveAs('${odt.id}')">Save</button>
+        <button class="tray-btn tray-btn-stop" onclick="odtToggleTrayAssign('${odt.id}')" style="font-size:10px;">Cancel</button>
+      </div>` : ''}
+    </div>`;
+  });
+
+  tray.innerHTML = html;
+}
+
+// Toggle the inline assign row for a stopped ODT in the tray
+function odtToggleTrayAssign(id) {
+  if (!window._odtTrayAssignOpen) window._odtTrayAssignOpen = new Set();
+  if (window._odtTrayAssignOpen.has(id)) {
+    window._odtTrayAssignOpen.delete(id);
+  } else {
+    window._odtTrayAssignOpen.add(id);
+  }
+  renderLiveTray();
+}
+
+// Toggle the detail panel for a tray row (note / ODT label)
+function toggleTrayExpand(id) {
+  if (!window._trayExpanded) window._trayExpanded = new Set();
+  if (window._trayExpanded.has(id)) window._trayExpanded.delete(id);
+  else window._trayExpanded.add(id);
+  renderLiveTray();
+}
+
+// Tick the tray clocks in-place (called from tickTimersInPlace)
+function tickTrayInPlace() {
+  activeSessions.forEach(s => {
+    const el = document.getElementById('tray-timer-' + s.id);
+    if (el) el.textContent = secsToStr(getElapsed(s));
+  });
+  onDemandTimers.forEach(odt => {
+    if (odt.running) {
+      const el = document.getElementById('tray-odt-' + odt.id);
+      if (el) el.textContent = odtGetDisplay(odt);
+    }
+  });
+}
+
+function renderLive() {
+  const study      = currentStudy();
+  const activities = study ? study.activities : [];
+  let   html       = '';
+
+  // Render the sticky tray separately
+  renderLiveTray();
+
+  // ── Launcher card ─────────────────────────────────────────────────────────
+  const qsPinned  = study ? study.quickStartPinned : null;
+  const qsVisible = activities.length === 0 ? [] :
+    (qsPinned === null ? activities : activities.filter(a => qsPinned.includes(a)));
+
+  const quickAdds = activities.filter(a => study && (study.manualStd[a] || getAutoAvg(study, a)));
+  const qaPinned  = study ? study.quickAddPinned : null;
+  const qaVisible = qaPinned === null ? quickAdds : quickAdds.filter(a => qaPinned.includes(a));
+
+  const groups = (study && study.activityGroups) || [];
+
+  // Persistent hidden state — separate namespaces for qs and qa
+  if (!window._liveHidden) window._liveHidden = {
+    qs: { hiddenGroups: new Set(), hiddenItems: new Set() },
+    qa: { hiddenGroups: new Set(), hiddenItems: new Set() }
+  };
+  // Migrate old flat structure if present
+  if (window._liveHidden.hiddenGroups) {
+    window._liveHidden = {
+      qs: { hiddenGroups: window._liveHidden.hiddenGroups, hiddenItems: window._liveHidden.hiddenItems },
+      qa: { hiddenGroups: new Set(), hiddenItems: new Set() }
+    };
+  }
+
+  // Persistent custom order — { groups: [id,...], items: {groupId|'other': [name,...]} }
+  if (!window._liveOrder) window._liveOrder = { groups: [], items: {} };
+
+  // Returns groups in custom order (falls back to natural order for any missing)
+  function orderedGroups(groupList) {
+    const order = window._liveOrder.groups;
+    const byId  = Object.fromEntries(groupList.map(g => [g.id, g]));
+    const seen  = new Set();
+    const result = [];
+    order.forEach(id => { if (byId[id]) { result.push(byId[id]); seen.add(id); } });
+    groupList.forEach(g => { if (!seen.has(g.id)) result.push(g); });
+    return result;
+  }
+
+  // Returns items in custom order for a given groupId (or 'other')
+  function orderedItems(groupId, itemList) {
+    const order = (window._liveOrder.items || {})[groupId] || [];
+    const seen  = new Set();
+    const result = [];
+    order.forEach(n => { if (itemList.includes(n)) { result.push(n); seen.add(n); } });
+    itemList.forEach(n => { if (!seen.has(n)) result.push(n); });
+    return result;
+  }
+
+  // Helper: render a set of activities as grouped chip rows (hidden = fully invisible)
+  // mode: 'qs' | 'qa'
+  function renderChipGroups(visibleList, mode) {
+    if (visibleList.length === 0) return '';
+    let out = '';
+
+    const orderedGrps = orderedGroups(groups);
+    const groupSections = [];
+    orderedGrps.forEach(g => {
+      const inGroup = orderedItems(g.id, visibleList.filter(a => g.activities.includes(a)));
+      if (inGroup.length > 0) groupSections.push({ id: g.id, label: g.name, color: g.color, items: inGroup });
+    });
+    const groupedNames = new Set(groups.flatMap(g => g.activities));
+    const rawUngrouped = visibleList.filter(a => !groupedNames.has(a));
+    const ungrouped    = orderedItems('other', rawUngrouped);
+    if (ungrouped.length > 0) {
+      groupSections.push({ id: 'other', label: groupSections.length > 0 ? 'Other' : null, color: null, items: ungrouped });
+    }
+
+    const ns = window._liveHidden[mode] || { hiddenGroups: new Set(), hiddenItems: new Set() };
+    groupSections.forEach(section => {
+      if (ns.hiddenGroups.has(section.id)) return;
+      const visItems = section.items.filter(a => !ns.hiddenItems.has(a));
+      if (visItems.length === 0 && !section.label) return;
+      if (section.label) {
+        const dot = section.color
+          ? `<span class="chip-group-dot" style="background:${section.color};"></span>`
+          : '';
+        out += `<div class="chip-group-label">${dot}${esc(section.label)}</div>`;
+      }
+      if (visItems.length > 0) {
+        out += `<div class="live-chips" style="margin-bottom:4px;">`;
+        visItems.forEach(a => {
+          if (mode === 'qs') {
+            const isRunning = activeSessions.some(s => s.activityName === a && !s.paused);
+            const aColor    = getActivityColor(study, a);
+            const chipStyle = aColor ? `--chip-color:${aColor};` : (section.color ? `--chip-color:${section.color};` : '');
+            out += `<button class="activity-chip ${isRunning ? 'chip-running' : ''}"
+              style="${chipStyle}"
+              onclick="quickStartTimer('${esc(a)}')"
+              title="${isRunning ? 'Already running' : 'Start ' + esc(a)}">
+              ${isRunning ? '▶' : '▷'} ${esc(a)}
+            </button>`;
+          } else {
+            const std = study.manualStd[a] || getAutoAvg(study, a);
+            const aColor = getActivityColor(study, a);
+            const chipStyle = aColor ? `--chip-color:${aColor};` : (section.color ? `--chip-color:${section.color};` : '');
+            out += `<button class="activity-chip chip-qa" style="${chipStyle}"
+              onclick="quickAddEntry('${esc(a)}')"
+              title="Log ${esc(a)} at standard time">
+              ${esc(a)} <span class="chip-badge">${secsToStr(std)}</span>
+            </button>`;
+          }
+        });
+        out += `</div>`;
+      }
+    });
+    return out;
+  }
+
+  // Count total hidden across both namespaces for badge
+  const qsNs = window._liveHidden.qs || { hiddenGroups: new Set(), hiddenItems: new Set() };
+  const qaNs = window._liveHidden.qa || { hiddenGroups: new Set(), hiddenItems: new Set() };
+  const totalHidden = qsNs.hiddenGroups.size + qsNs.hiddenItems.size + qaNs.hiddenGroups.size + qaNs.hiddenItems.size;
+  const hiddenBadge = totalHidden > 0
+    ? `<span class="chip-hidden-badge">${totalHidden}</span>` : '';
+
+  html += `<div class="card" style="padding-bottom:12px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+      <div class="live-section-label">Start Session</div>
+      <button class="chip-vis-btn" onclick="openChipVisMenu()" title="Show / hide buttons">
+        ⊞ Visibility ${hiddenBadge}
+      </button>
+    </div>`;
+
+  // Activity chips — grouped by activityGroups
+  html += `<div id="live-chips-region">`;
+  if (qsVisible.length > 0) {
+    html += `<div class="live-chips-label">Tap to start timer</div>`;
+    html += renderChipGroups(qsVisible, 'qs');
+  } else if (activities.length > 0) {
+    html += `<div class="live-chips-label">Tap to start timer</div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:10px;">
+      No activities shown — <button class="btn-link" onclick="resetQsPins()">reset filter</button>
+    </div>`;
+  }
+  if (qaVisible.length > 0) {
+    html += `<div class="live-chips-label" style="margin-top:10px;">Quick add (standard time)</div>`;
+    html += renderChipGroups(qaVisible, 'qa');
+  }
+  html += `</div>`; // end live-chips-region
+
+  if (activities.length > 0) html += `<hr class="light" style="margin:12px 0 10px;">`;
+
+  html += `
+  <div class="live-new-row">
+    <input id="live-new-act" class="live-new-input" type="text"
+      placeholder="${activities.length === 0 ? 'Activity name — press Enter to start' : 'New activity name…'}"
+      onkeydown="if(event.key==='Enter') liveStartNew()">
+    <button class="sess-btn sess-btn-resume" onclick="liveStartNew()" style="white-space:nowrap;">▷ Start</button>
+  </div>`;
+
+  // Collapsible customise panel
+  if (activities.length > 0) {
+    html += `
+    <div style="margin-top:8px;">
+      <button class="btn-link" onclick="toggleLiveEditPanel()" id="live-edit-toggle">⚙ Customise shortcuts</button>
+      <div id="live-edit-panel" style="display:none;margin-top:10px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+          <div>
+            <div class="live-chips-label" style="margin-bottom:6px;">Timer shortcuts</div>
+            <div style="display:flex;flex-direction:column;gap:4px;" id="qs-checklist">
+              ${activities.map(a => {
+                const checked = qsPinned === null || qsPinned.includes(a);
+                return `<label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:12px;">
+                  <input type="checkbox" ${checked ? 'checked' : ''} onchange="toggleQsPin('${esc(a)}',this.checked)"
+                    style="width:14px;height:14px;cursor:pointer;">
+                  <span>${esc(a)}</span>
+                </label>`;
+              }).join('')}
+            </div>
+            <button class="btn btn-ghost btn-xs" style="margin-top:6px;" onclick="resetQsPins()">Reset</button>
+          </div>
+          ${quickAdds.length > 0 ? `<div>
+            <div class="live-chips-label" style="margin-bottom:6px;">Quick-add shortcuts</div>
+            <div style="display:flex;flex-direction:column;gap:4px;" id="qa-checklist">
+              ${quickAdds.map(a => {
+                const checked2 = qaPinned === null || qaPinned.includes(a);
+                const std2 = study.manualStd[a] || getAutoAvg(study, a);
+                return `<label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:12px;">
+                  <input type="checkbox" ${checked2 ? 'checked' : ''} onchange="toggleQuickAddPin('${esc(a)}',this.checked)"
+                    style="width:14px;height:14px;cursor:pointer;">
+                  <span>${esc(a)}</span>
+                  <span class="chip-badge" style="margin-left:auto;">${secsToStr(std2)}</span>
+                </label>`;
+              }).join('')}
+            </div>
+            <button class="btn btn-ghost btn-xs" style="margin-top:6px;" onclick="resetQuickAddPins()">Reset</button>
+          </div>` : ''}
+        </div>
       </div>
     </div>`;
   }
 
-  // Quick-add for activities with standard times
-  const quickAdds = activities.filter(a => study && (study.manualStd[a] || getAutoAvg(study, a)));
-  if (quickAdds.length > 0) {
-    // null means show all; array means show only pinned (that still have a std time)
-    const pinned = study.quickAddPinned;
-    const visible = pinned === null
-      ? quickAdds
-      : quickAdds.filter(a => pinned.includes(a));
+  html += `</div>`; // end launcher card
 
-    html += `<div class="card">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-        <div class="card-title" style="margin:0;">Quick Add (Standard Time)</div>
-        <button class="btn btn-ghost btn-sm" onclick="toggleQuickAddEdit()" id="qa-edit-btn"
-          style="font-size:11px;padding:3px 9px;">⚙ Edit</button>
-      </div>
-
-      <div id="qa-edit-panel" style="display:none;margin-bottom:10px;">
-        <div style="font-size:12px;color:var(--text2);margin-bottom:6px;">Select which activities appear here:</div>
-        <div style="display:flex;flex-direction:column;gap:4px;" id="qa-checklist">
-          ${quickAdds.map(a => {
-            const checked = pinned === null || pinned.includes(a);
-            const std = study.manualStd[a] || getAutoAvg(study, a);
-            return `<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;">
-              <input type="checkbox" ${checked ? 'checked' : ''} onchange="toggleQuickAddPin('${esc(a)}',this.checked)"
-                style="width:16px;height:16px;cursor:pointer;">
-              <span>${esc(a)}</span>
-              <span class="badge badge-blue" style="margin-left:auto;">${secsToStr(std)}</span>
-            </label>`;
-          }).join('')}
-        </div>
-        <button class="btn btn-ghost btn-sm" style="margin-top:8px;font-size:11px;" onclick="resetQuickAddPins()">Reset to All</button>
-      </div>
-
-      <div style="display:flex;flex-wrap:wrap;gap:6px;">
-        ${visible.length > 0
-          ? visible.map(a => {
-              const std = study.manualStd[a] || getAutoAvg(study, a);
-              return `<button class="btn btn-ghost btn-sm" onclick="quickAddEntry('${esc(a)}')">${esc(a)} <span class="badge badge-blue">${secsToStr(std)}</span></button>`;
-            }).join('')
-          : `<span style="font-size:13px;color:var(--text3);">No activities selected — tap ⚙ Edit to choose.</span>`
-        }
-      </div>
+  // ── Empty state when nothing is running ───────────────────────────────────
+  if (activeSessions.length === 0 && onDemandTimers.length === 0) {
+    html += `<div class="live-empty-hint" style="text-align:center;padding:32px 0;">
+      No timers running.<br>Start a session above or tap <strong>+ On-Demand</strong> for a free timer.
     </div>`;
-  } // end if (quickAdds.length > 0)
-
-  const collapsedSessions = window._collapsedSessions || (window._collapsedSessions = new Set());
-
-  if (activeSessions.length === 0) {
-    html += `<div class="empty-state">No active sessions.<br>Start a timer above.</div>`;
-  } else {
-    activeSessions.forEach(s => {
-      const elapsed   = getElapsed(s);
-      const isPaused  = s.paused;
-      const isCollapsed = collapsedSessions.has(s.id);
-      const actColor  = getActivityColor(study, s.activityName);
-      const actNote   = (study && study.activityNotes && study.activityNotes[s.activityName]) || '';
-      const cardStyle = actColor ? `border-left-color:${actColor};` : '';
-
-      html += `
-      <div class="session-card ${isPaused ? 'paused' : ''}" id="sess-${s.id}" style="${cardStyle}">
-        <div class="session-card-header">
-          <div style="flex:1;min-width:0;">
-            <div class="session-activity" style="${actColor ? `color:${actColor};` : ''}">${esc(s.activityName)}</div>
-            ${actNote ? `<div style="font-size:11px;color:var(--text3);margin-top:1px;font-style:italic;">${esc(actNote)}</div>` : ''}
-            <div class="session-start mono">${formatTime(s.startTs, mode)}</div>
-          </div>
-          <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
-            <div class="timer-display ${isPaused ? 'paused' : ''}" id="timer-${s.id}">${secsToStr(elapsed)}</div>
-            ${isPaused ? '<div class="badge badge-amber">PAUSED</div>' : ''}
-            <button class="session-collapse-btn" onclick="toggleSessionCollapse('${s.id}')" title="${isCollapsed ? 'Expand' : 'Collapse'}">
-              ${isCollapsed ? '▼' : '▲'}
-            </button>
-          </div>
-        </div>
-        <div class="session-actions" style="margin-top:8px;">
-          ${isPaused
-            ? `<button class="btn btn-green btn-sm" onclick="resumeSession('${s.id}')">▶ Resume</button>`
-            : `<button class="btn btn-amber btn-sm" onclick="pauseSession('${s.id}')">⏸ Pause</button>`}
-          <button class="btn btn-primary btn-sm" onclick="stopAndSave('${s.id}')">⏹ Save</button>
-          <button class="btn btn-ghost btn-sm" onclick="discardSession('${s.id}')">✕ Discard</button>
-        </div>
-        <div class="session-card-body ${isCollapsed ? 'collapsed' : ''}">
-          <div class="session-meta" style="margin-top:8px;">
-            <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:12px;">
-              <input type="checkbox" ${s.exception ? 'checked' : ''} onchange="sessionToggleException('${s.id}', this.checked)"> Exception
-            </label>
-          </div>
-          <div class="session-note">
-            <input type="text" placeholder="Add note…" value="${esc(s.note)}" oninput="sessionNote('${s.id}', this.value)">
-          </div>
-          <div class="session-img-section">${renderSessionImgStrip(s.id)}</div>
-        </div>
-      </div>`;
-    });
   }
 
   document.getElementById('content').innerHTML = html;
+}
+
+function toggleLiveEditPanel() {
+  const panel  = document.getElementById('live-edit-panel');
+  const toggle = document.getElementById('live-edit-toggle');
+  if (!panel) return;
+  const opening = panel.style.display === 'none';
+  panel.style.display = opening ? 'block' : 'none';
+  toggle.textContent  = opening ? '✕ Close customise' : '⚙ Customise shortcuts';
+}
+
+function toggleChipGroup(groupId, mode) {
+  if (!window._liveHidden) window._liveHidden = {
+    qs: { hiddenGroups: new Set(), hiddenItems: new Set() },
+    qa: { hiddenGroups: new Set(), hiddenItems: new Set() }
+  };
+  const ns = window._liveHidden[mode];
+  if (!ns) return;
+  if (ns.hiddenGroups.has(groupId)) ns.hiddenGroups.delete(groupId);
+  else ns.hiddenGroups.add(groupId);
+  _refreshChipsInPlace();
+  _updatePopupPillForGroup(groupId, mode);
+}
+
+function toggleChipItem(activityName, mode) {
+  if (!window._liveHidden) window._liveHidden = {
+    qs: { hiddenGroups: new Set(), hiddenItems: new Set() },
+    qa: { hiddenGroups: new Set(), hiddenItems: new Set() }
+  };
+  const ns = window._liveHidden[mode];
+  if (!ns) return;
+  if (ns.hiddenItems.has(activityName)) ns.hiddenItems.delete(activityName);
+  else ns.hiddenItems.add(activityName);
+  _refreshChipsInPlace();
+  _updatePopupPillForItem(activityName, mode);
+}
+
+// Updates only the chip region and visibility badge — no scroll reset
+function _refreshChipsInPlace() {
+  const study      = currentStudy();
+  if (!study) return;
+  const activities = study.activities || [];
+  const groups     = study.activityGroups || [];
+
+  if (!window._liveHidden) window._liveHidden = {
+    qs: { hiddenGroups: new Set(), hiddenItems: new Set() },
+    qa: { hiddenGroups: new Set(), hiddenItems: new Set() }
+  };
+  if (window._liveHidden.hiddenGroups) {
+    window._liveHidden = {
+      qs: { hiddenGroups: window._liveHidden.hiddenGroups, hiddenItems: window._liveHidden.hiddenItems },
+      qa: { hiddenGroups: new Set(), hiddenItems: new Set() }
+    };
+  }
+
+  const qsPinned  = study.quickStartPinned;
+  const qsVisible = qsPinned === null ? activities : activities.filter(a => qsPinned.includes(a));
+  const quickAdds = activities.filter(a => study.manualStd[a] || getAutoAvg(study, a));
+  const qaPinned  = study.quickAddPinned;
+  const qaVisible = qaPinned === null ? quickAdds : quickAdds.filter(a => qaPinned.includes(a));
+
+  // Reuse renderChipGroups logic inline (can't call inner fn from outside renderLive)
+  function buildChipGroups(visibleList, mode) {
+    if (visibleList.length === 0) return '';
+    let out = '';
+
+    // Apply custom group order
+    const order    = (window._liveOrder || {}).groups || [];
+    const byId     = Object.fromEntries(groups.map(g => [g.id, g]));
+    const seen     = new Set();
+    const ordGrps  = [];
+    order.forEach(id => { if (byId[id]) { ordGrps.push(byId[id]); seen.add(id); } });
+    groups.forEach(g => { if (!seen.has(g.id)) ordGrps.push(g); });
+
+    // Apply custom item order per group
+    function applyItemOrder(groupId, items) {
+      const iOrder = ((window._liveOrder || {}).items || {})[groupId] || [];
+      const iSeen  = new Set();
+      const res    = [];
+      iOrder.forEach(n => { if (items.includes(n)) { res.push(n); iSeen.add(n); } });
+      items.forEach(n => { if (!iSeen.has(n)) res.push(n); });
+      return res;
+    }
+
+    const groupSections = [];
+    ordGrps.forEach(g => {
+      const inGroup = applyItemOrder(g.id, visibleList.filter(a => g.activities.includes(a)));
+      if (inGroup.length > 0) groupSections.push({ id: g.id, label: g.name, color: g.color, items: inGroup });
+    });
+    const groupedNames = new Set(groups.flatMap(g => g.activities));
+    const rawUng = visibleList.filter(a => !groupedNames.has(a));
+    const ungrouped = applyItemOrder('other', rawUng);
+    if (ungrouped.length > 0)
+      groupSections.push({ id: 'other', label: groupSections.length > 0 ? 'Other' : null, color: null, items: ungrouped });
+
+    groupSections.forEach(section => {
+      const ns = window._liveHidden[mode] || { hiddenGroups: new Set(), hiddenItems: new Set() };
+      if (ns.hiddenGroups.has(section.id)) return;
+      const visItems = section.items.filter(a => !ns.hiddenItems.has(a));
+      if (visItems.length === 0 && !section.label) return;
+      if (section.label) {
+        const dot = section.color ? `<span class="chip-group-dot" style="background:${section.color};"></span>` : '';
+        out += `<div class="chip-group-label">${dot}${esc(section.label)}</div>`;
+      }
+      if (visItems.length > 0) {
+        out += `<div class="live-chips" style="margin-bottom:4px;">`;
+        visItems.forEach(a => {
+          if (mode === 'qs') {
+            const isRunning = activeSessions.some(s => s.activityName === a && !s.paused);
+            const aColor    = getActivityColor(study, a);
+            const chipStyle = aColor ? `--chip-color:${aColor};` : (section.color ? `--chip-color:${section.color};` : '');
+            out += `<button class="activity-chip ${isRunning ? 'chip-running' : ''}" style="${chipStyle}"
+              onclick="quickStartTimer('${esc(a)}')"
+              title="${isRunning ? 'Already running' : 'Start ' + esc(a)}">
+              ${isRunning ? '▶' : '▷'} ${esc(a)}</button>`;
+          } else {
+            const std = study.manualStd[a] || getAutoAvg(study, a);
+            const aColor = getActivityColor(study, a);
+            const chipStyle = aColor ? `--chip-color:${aColor};` : (section.color ? `--chip-color:${section.color};` : '');
+            out += `<button class="activity-chip chip-qa" style="${chipStyle}"
+              onclick="quickAddEntry('${esc(a)}')"
+              title="Log ${esc(a)} at standard time">
+              ${esc(a)} <span class="chip-badge">${secsToStr(std)}</span></button>`;
+          }
+        });
+        out += `</div>`;
+      }
+    });
+    return out;
+  }
+
+  // Update chip region
+  const region = document.getElementById('live-chips-region');
+  if (region) {
+    let inner = '';
+    if (qsVisible.length > 0) {
+      inner += `<div class="live-chips-label">Tap to start timer</div>`;
+      inner += buildChipGroups(qsVisible, 'qs');
+    }
+    if (qaVisible.length > 0) {
+      inner += `<div class="live-chips-label" style="margin-top:10px;">Quick add (standard time)</div>`;
+      inner += buildChipGroups(qaVisible, 'qa');
+    }
+    region.innerHTML = inner;
+  }
+
+  // Update the badge on the visibility button
+  const _qsNs = window._liveHidden.qs || { hiddenGroups: new Set(), hiddenItems: new Set() };
+  const _qaNs = window._liveHidden.qa || { hiddenGroups: new Set(), hiddenItems: new Set() };
+  const totalHidden = _qsNs.hiddenGroups.size + _qsNs.hiddenItems.size + _qaNs.hiddenGroups.size + _qaNs.hiddenItems.size;
+  const visBtn = document.querySelector('.chip-vis-btn');
+  if (visBtn) {
+    const badge = totalHidden > 0 ? `<span class="chip-hidden-badge">${totalHidden}</span>` : '';
+    visBtn.innerHTML = `⊞ Visibility ${badge}`;
+  }
+}
+
+function openChipVisMenu() {
+  // Remove any existing popup
+  const existing = document.getElementById('chip-vis-overlay');
+  if (existing) { existing.remove(); return; }
+
+  const overlay = document.createElement('div');
+  overlay.id = 'chip-vis-overlay';
+  overlay.className = 'chip-vis-overlay';
+  overlay.onclick = e => { if (e.target === overlay) overlay.remove(); };
+
+  const popup = document.createElement('div');
+  popup.id = 'chip-vis-popup';
+  popup.className = 'chip-vis-popup';
+  overlay.appendChild(popup);
+  document.body.appendChild(overlay);
+  _buildChipVisPopup();
+}
+
+function _buildChipVisPopup() {
+  const popup = document.getElementById('chip-vis-popup');
+  if (!popup) return;
+  const study = currentStudy();
+  if (!study) return;
+
+  if (!window._liveHidden) window._liveHidden = {
+    qs: { hiddenGroups: new Set(), hiddenItems: new Set() },
+    qa: { hiddenGroups: new Set(), hiddenItems: new Set() }
+  };
+  if (!window._liveOrder)  window._liveOrder  = { groups: [], items: {} };
+  if (!window._chipVisTab) window._chipVisTab  = 'visibility';
+
+  const qsNs = window._liveHidden.qs || { hiddenGroups: new Set(), hiddenItems: new Set() };
+  const qaNs = window._liveHidden.qa || { hiddenGroups: new Set(), hiddenItems: new Set() };
+  const groups     = study.activityGroups || [];
+  const activities = study.activities || [];
+  const tab        = window._chipVisTab;
+  const totalHidden = qsNs.hiddenGroups.size + qsNs.hiddenItems.size + qaNs.hiddenGroups.size + qaNs.hiddenItems.size;
+
+  let html = `
+  <div class="chip-vis-header">
+    <span class="chip-vis-title">Shortcuts</span>
+    <div style="display:flex;gap:6px;align-items:center;">
+      ${tab === 'visibility' ? `<button class="chip-vis-reset" id="chip-vis-reset-btn"
+        style="${totalHidden > 0 ? '' : 'visibility:hidden;'}"
+        onclick="resetChipVisibility()">Show All</button>` : ''}
+      ${tab === 'arrange' ? `<button class="chip-vis-reset" onclick="resetChipOrder()" style="visibility:${_hasCustomOrder() ? 'visible' : 'hidden'};">Reset Order</button>` : ''}
+      <button class="chip-vis-close" onclick="document.getElementById('chip-vis-overlay').remove()">✕</button>
+    </div>
+  </div>
+  <div class="chip-vis-tabs">
+    <button class="chip-vis-tab ${tab === 'visibility' ? 'active' : ''}" onclick="switchChipVisTab('visibility')">Visibility</button>
+    <button class="chip-vis-tab ${tab === 'arrange'    ? 'active' : ''}" onclick="switchChipVisTab('arrange')">Arrange</button>
+  </div>
+  <div class="chip-vis-body" id="chip-vis-body">`;
+
+  if (tab === 'visibility') {
+    html += _buildVisibilityBody(groups, activities, qsNs, qaNs);
+  } else {
+    html += _buildArrangeBody(groups, activities);
+  }
+
+  html += `</div>`;
+  popup.innerHTML = html;
+}
+
+// ── Visibility tab body ───────────────────────────────────────────────────
+function _buildVisibilityBody(groups, activities, qsNs, qaNs) {
+  const study = currentStudy();
+  if (!study) return '';
+
+  const quickAdds    = activities.filter(a => study.manualStd[a] || getAutoAvg(study, a));
+  const groupedNames = new Set(groups.flatMap(g => g.activities));
+  const ungrouped    = activities.filter(a => !groupedNames.has(a));
+  let html = '';
+
+  // Helper: render one mode's section list
+  function buildSection(mode, ns, actList) {
+    let out = '';
+    groups.forEach(g => {
+      const grpActivities = g.activities.filter(a => actList.includes(a));
+      if (grpActivities.length === 0) return;
+      const grpHidden = ns.hiddenGroups.has(g.id);
+      const dot    = g.color ? `<span class="chip-group-dot" style="background:${g.color};margin-right:4px;"></span>` : '';
+      const safeId = CSS.escape(g.id);
+      out += `<div class="chip-vis-section" id="chip-vis-grpsec-${mode}-${safeId}">
+        <div class="chip-vis-row chip-vis-group-row" onclick="toggleChipGroup('${g.id}','${mode}')">
+          <span class="chip-vis-row-label">${dot}<strong>${esc(g.name)}</strong></span>
+          <span class="chip-vis-toggle ${grpHidden ? '' : 'on'}" id="chip-vis-pill-grp-${mode}-${safeId}">${grpHidden ? 'Hidden' : 'Visible'}</span>
+        </div>
+        <div id="chip-vis-items-${mode}-${safeId}">`;
+      if (!grpHidden) {
+        grpActivities.forEach(a => {
+          const itemHidden = ns.hiddenItems.has(a);
+          const safeA = CSS.escape(a);
+          out += `<div class="chip-vis-row chip-vis-item-row" onclick="toggleChipItem('${esc(a)}','${mode}')">
+            <span class="chip-vis-row-label chip-vis-indent">${esc(a)}</span>
+            <span class="chip-vis-toggle ${itemHidden ? '' : 'on'}" id="chip-vis-pill-item-${mode}-${safeA}">${itemHidden ? 'Hidden' : 'Visible'}</span>
+          </div>`;
+        });
+      }
+      out += `</div></div>`;
+    });
+
+    const ungroupedForMode = actList.filter(a => !new Set(groups.flatMap(g => g.activities)).has(a));
+    if (ungroupedForMode.length > 0) {
+      if (groups.length > 0) {
+        const ungroupedHidden = ns.hiddenGroups.has('other');
+        out += `<div class="chip-vis-section" id="chip-vis-grpsec-${mode}-other">
+          <div class="chip-vis-row chip-vis-group-row" onclick="toggleChipGroup('other','${mode}')">
+            <span class="chip-vis-row-label"><strong>Other</strong></span>
+            <span class="chip-vis-toggle ${ungroupedHidden ? '' : 'on'}" id="chip-vis-pill-grp-${mode}-other">${ungroupedHidden ? 'Hidden' : 'Visible'}</span>
+          </div>
+          <div id="chip-vis-items-${mode}-other">`;
+        if (!ungroupedHidden) {
+          ungroupedForMode.forEach(a => {
+            const itemHidden = ns.hiddenItems.has(a);
+            const safeA = CSS.escape(a);
+            out += `<div class="chip-vis-row chip-vis-item-row" onclick="toggleChipItem('${esc(a)}','${mode}')">
+              <span class="chip-vis-row-label chip-vis-indent">${esc(a)}</span>
+              <span class="chip-vis-toggle ${itemHidden ? '' : 'on'}" id="chip-vis-pill-item-${mode}-${safeA}">${itemHidden ? 'Hidden' : 'Visible'}</span>
+            </div>`;
+          });
+        }
+        out += `</div></div>`;
+      } else {
+        out += `<div class="chip-vis-section">`;
+        ungroupedForMode.forEach(a => {
+          const itemHidden = ns.hiddenItems.has(a);
+          const safeA = CSS.escape(a);
+          out += `<div class="chip-vis-row chip-vis-item-row" onclick="toggleChipItem('${esc(a)}','${mode}')">
+            <span class="chip-vis-row-label">${esc(a)}</span>
+            <span class="chip-vis-toggle ${itemHidden ? '' : 'on'}" id="chip-vis-pill-item-${mode}-${safeA}">${itemHidden ? 'Hidden' : 'Visible'}</span>
+          </div>`;
+        });
+        out += `</div>`;
+      }
+    }
+    return out;
+  }
+
+  // Track which mode sections are collapsed (default: both open)
+  if (!window._chipVisCollapsed) window._chipVisCollapsed = new Set();
+
+  function modeHeader(mode, label) {
+    const isCollapsed = window._chipVisCollapsed.has(mode);
+    const hiddenCount = (mode === 'qs')
+      ? qsNs.hiddenGroups.size + qsNs.hiddenItems.size
+      : qaNs.hiddenGroups.size + qaNs.hiddenItems.size;
+    const badge = hiddenCount > 0
+      ? `<span style="font-family:var(--mono);font-size:9px;background:var(--amber);color:#fff;
+           border-radius:8px;padding:1px 6px;font-weight:700;margin-left:6px;">${hiddenCount}</span>`
+      : '';
+    const chevron = isCollapsed ? '▶' : '▼';
+    return `<button class="chip-vis-mode-header" id="chip-vis-mode-hdr-${mode}"
+      onclick="toggleChipVisSection('${mode}')"
+      style="width:100%;text-align:left;cursor:pointer;display:flex;align-items:center;
+             justify-content:space-between;border:none;gap:8px;">
+      <span style="display:flex;align-items:center;gap:6px;">${label}${badge}</span>
+      <span style="font-size:9px;opacity:0.6;">${chevron}</span>
+    </button>`;
+  }
+
+  // Timer Shortcuts section
+  html += modeHeader('qs', 'Timer Shortcuts');
+  if (!window._chipVisCollapsed.has('qs')) {
+    html += `<div id="chip-vis-section-qs">`;
+    html += buildSection('qs', qsNs, activities);
+    html += `</div>`;
+  }
+
+  // Quick Add section
+  if (quickAdds.length > 0) {
+    html += modeHeader('qa', 'Quick Add');
+    if (!window._chipVisCollapsed.has('qa')) {
+      html += `<div id="chip-vis-section-qa">`;
+      html += buildSection('qa', qaNs, quickAdds);
+      html += `</div>`;
+    }
+  }
+
+  return html;
+}
+
+function toggleChipVisSection(mode) {
+  if (!window._chipVisCollapsed) window._chipVisCollapsed = new Set();
+  if (window._chipVisCollapsed.has(mode)) window._chipVisCollapsed.delete(mode);
+  else window._chipVisCollapsed.add(mode);
+
+  // Toggle in-place without rebuilding whole popup
+  const hdr = document.getElementById(`chip-vis-mode-hdr-${mode}`);
+  const section = document.getElementById(`chip-vis-section-${mode}`);
+  const isNowCollapsed = window._chipVisCollapsed.has(mode);
+
+  if (hdr) {
+    const chevron = hdr.querySelector('span:last-child');
+    if (chevron) chevron.textContent = isNowCollapsed ? '▶' : '▼';
+  }
+
+  if (isNowCollapsed) {
+    if (section) section.remove();
+  } else {
+    // Re-insert the section content after the header
+    const study = currentStudy();
+    if (!study) return;
+    const groups    = study.activityGroups || [];
+    const activities = study.activities || [];
+    const quickAdds = activities.filter(a => study.manualStd[a] || getAutoAvg(study, a));
+    const qsNs = (window._liveHidden || {}).qs || { hiddenGroups: new Set(), hiddenItems: new Set() };
+    const qaNs = (window._liveHidden || {}).qa || { hiddenGroups: new Set(), hiddenItems: new Set() };
+
+    const ns      = mode === 'qs' ? qsNs : qaNs;
+    const actList = mode === 'qs' ? activities : quickAdds;
+
+    // Build section HTML using the same buildSection logic
+    let inner = '';
+    const groupedNames = new Set(groups.flatMap(g => g.activities));
+    groups.forEach(g => {
+      const grpActivities = g.activities.filter(a => actList.includes(a));
+      if (grpActivities.length === 0) return;
+      const grpHidden = ns.hiddenGroups.has(g.id);
+      const dot    = g.color ? `<span class="chip-group-dot" style="background:${g.color};margin-right:4px;"></span>` : '';
+      const safeId = CSS.escape(g.id);
+      inner += `<div class="chip-vis-section" id="chip-vis-grpsec-${mode}-${safeId}">
+        <div class="chip-vis-row chip-vis-group-row" onclick="toggleChipGroup('${g.id}','${mode}')">
+          <span class="chip-vis-row-label">${dot}<strong>${esc(g.name)}</strong></span>
+          <span class="chip-vis-toggle ${grpHidden ? '' : 'on'}" id="chip-vis-pill-grp-${mode}-${safeId}">${grpHidden ? 'Hidden' : 'Visible'}</span>
+        </div>
+        <div id="chip-vis-items-${mode}-${safeId}">`;
+      if (!grpHidden) {
+        grpActivities.forEach(a => {
+          const safeA = CSS.escape(a);
+          const itemHidden = ns.hiddenItems.has(a);
+          inner += `<div class="chip-vis-row chip-vis-item-row" onclick="toggleChipItem('${esc(a)}','${mode}')">
+            <span class="chip-vis-row-label chip-vis-indent">${esc(a)}</span>
+            <span class="chip-vis-toggle ${itemHidden ? '' : 'on'}" id="chip-vis-pill-item-${mode}-${safeA}">${itemHidden ? 'Hidden' : 'Visible'}</span>
+          </div>`;
+        });
+      }
+      inner += `</div></div>`;
+    });
+    const ungrouped = actList.filter(a => !groupedNames.has(a));
+    if (ungrouped.length > 0) {
+      if (groups.length > 0) {
+        const ugh = ns.hiddenGroups.has('other');
+        inner += `<div class="chip-vis-section" id="chip-vis-grpsec-${mode}-other">
+          <div class="chip-vis-row chip-vis-group-row" onclick="toggleChipGroup('other','${mode}')">
+            <span class="chip-vis-row-label"><strong>Other</strong></span>
+            <span class="chip-vis-toggle ${ugh ? '' : 'on'}" id="chip-vis-pill-grp-${mode}-other">${ugh ? 'Hidden' : 'Visible'}</span>
+          </div>
+          <div id="chip-vis-items-${mode}-other">`;
+        if (!ugh) {
+          ungrouped.forEach(a => {
+            const safeA = CSS.escape(a); const ih = ns.hiddenItems.has(a);
+            inner += `<div class="chip-vis-row chip-vis-item-row" onclick="toggleChipItem('${esc(a)}','${mode}')">
+              <span class="chip-vis-row-label chip-vis-indent">${esc(a)}</span>
+              <span class="chip-vis-toggle ${ih ? '' : 'on'}" id="chip-vis-pill-item-${mode}-${CSS.escape(a)}">${ih ? 'Hidden' : 'Visible'}</span>
+            </div>`;
+          });
+        }
+        inner += `</div></div>`;
+      } else {
+        inner += `<div class="chip-vis-section">`;
+        ungrouped.forEach(a => {
+          const safeA = CSS.escape(a); const ih = ns.hiddenItems.has(a);
+          inner += `<div class="chip-vis-row chip-vis-item-row" onclick="toggleChipItem('${esc(a)}','${mode}')">
+            <span class="chip-vis-row-label">${esc(a)}</span>
+            <span class="chip-vis-toggle ${ih ? '' : 'on'}" id="chip-vis-pill-item-${mode}-${safeA}">${ih ? 'Hidden' : 'Visible'}</span>
+          </div>`;
+        });
+        inner += `</div>`;
+      }
+    }
+
+    const div = document.createElement('div');
+    div.id = `chip-vis-section-${mode}`;
+    div.innerHTML = inner;
+    if (hdr && hdr.parentNode) hdr.parentNode.insertBefore(div, hdr.nextSibling);
+  }
+}
+
+// ── Arrange tab body ──────────────────────────────────────────────────────
+function _buildArrangeBody(groups, activities) {
+  if (!window._liveOrder) window._liveOrder = { groups: [], items: {} };
+
+  const groupedNames = new Set(groups.flatMap(g => g.activities));
+  const rawUngrouped = activities.filter(a => !groupedNames.has(a));
+
+  // Apply current custom group order
+  const grpOrder = window._liveOrder.groups || [];
+  const byId     = Object.fromEntries(groups.map(g => [g.id, g]));
+  const seen     = new Set();
+  const ordGrps  = [];
+  grpOrder.forEach(id => { if (byId[id]) { ordGrps.push(byId[id]); seen.add(id); } });
+  groups.forEach(g => { if (!seen.has(g.id)) ordGrps.push(g); });
+
+  function applyItemOrder(gid, items) {
+    const ord  = ((window._liveOrder.items) || {})[gid] || [];
+    const iSeen = new Set();
+    const res   = [];
+    ord.forEach(n => { if (items.includes(n)) { res.push(n); iSeen.add(n); } });
+    items.forEach(n => { if (!iSeen.has(n)) res.push(n); });
+    return res;
+  }
+
+  const hasGroups    = ordGrps.length > 0;
+  const hasUngrouped = rawUngrouped.length > 0;
+  // Flat list of sections for group-level up/down
+  const sectionIds = [...ordGrps.map(g => g.id), ...(hasUngrouped && hasGroups ? ['other'] : [])];
+  let html = '';
+
+  // Hint
+  html += `<div style="padding:10px 16px 2px;font-size:11px;color:var(--text3);font-family:var(--mono);letter-spacing:0.04em;">
+    Use ▲ ▼ to reorder groups and buttons
+  </div>`;
+
+  ordGrps.forEach((g, gi) => {
+    const grpActivities = applyItemOrder(g.id, g.activities.filter(a => activities.includes(a)));
+    if (grpActivities.length === 0) return;
+    const dot      = g.color ? `<span class="chip-group-dot" style="background:${g.color};margin-right:4px;"></span>` : '';
+    const isFirst  = gi === 0;
+    const isLast   = gi === sectionIds.indexOf('other') - 1 || (gi === ordGrps.length - 1 && !hasUngrouped);
+
+    html += `<div class="chip-vis-section">
+      <div class="chip-vis-row chip-vis-group-row arr-row">
+        <span class="chip-vis-row-label">${dot}<strong>${esc(g.name)}</strong></span>
+        <div class="chip-arr-btns">
+          <button class="chip-arr-btn" onclick="moveChipGroup('${g.id}',-1)" title="Move up" ${isFirst ? 'disabled' : ''}>▲</button>
+          <button class="chip-arr-btn" onclick="moveChipGroup('${g.id}',1)"  title="Move down" ${isLast  ? 'disabled' : ''}>▼</button>
+        </div>
+      </div>`;
+    grpActivities.forEach((a, ai) => {
+      const isItemFirst = ai === 0;
+      const isItemLast  = ai === grpActivities.length - 1;
+      html += `<div class="chip-vis-row chip-vis-item-row arr-row">
+        <span class="chip-vis-row-label chip-vis-indent">${esc(a)}</span>
+        <div class="chip-arr-btns">
+          <button class="chip-arr-btn" onclick="moveChipItem('${g.id}','${esc(a)}',-1)" title="Move up"   ${isItemFirst ? 'disabled' : ''}>▲</button>
+          <button class="chip-arr-btn" onclick="moveChipItem('${g.id}','${esc(a)}',1)"  title="Move down" ${isItemLast  ? 'disabled' : ''}>▼</button>
+        </div>
+      </div>`;
+    });
+    html += `</div>`;
+  });
+
+  // Ungrouped section
+  if (hasUngrouped) {
+    const ordUng   = applyItemOrder('other', rawUngrouped);
+    const isGrpFirst = !hasGroups;
+    const isGrpLast  = true; // other is always last
+    if (hasGroups) {
+      html += `<div class="chip-vis-section">
+        <div class="chip-vis-row chip-vis-group-row arr-row">
+          <span class="chip-vis-row-label"><strong>Other</strong></span>
+          <div class="chip-arr-btns">
+            <button class="chip-arr-btn" onclick="moveChipGroup('other',-1)" title="Move up" ${isGrpFirst ? 'disabled' : ''}>▲</button>
+            <button class="chip-arr-btn" disabled title="Other is always last">▼</button>
+          </div>
+        </div>`;
+      ordUng.forEach((a, ai) => {
+        html += `<div class="chip-vis-row chip-vis-item-row arr-row">
+          <span class="chip-vis-row-label chip-vis-indent">${esc(a)}</span>
+          <div class="chip-arr-btns">
+            <button class="chip-arr-btn" onclick="moveChipItem('other','${esc(a)}',-1)" ${ai === 0 ? 'disabled' : ''}>▲</button>
+            <button class="chip-arr-btn" onclick="moveChipItem('other','${esc(a)}',1)"  ${ai === ordUng.length-1 ? 'disabled' : ''}>▼</button>
+          </div>
+        </div>`;
+      });
+      html += `</div>`;
+    } else {
+      // No groups — flat list
+      html += `<div class="chip-vis-section">`;
+      ordUng.forEach((a, ai) => {
+        html += `<div class="chip-vis-row chip-vis-item-row arr-row">
+          <span class="chip-vis-row-label">${esc(a)}</span>
+          <div class="chip-arr-btns">
+            <button class="chip-arr-btn" onclick="moveChipItem('other','${esc(a)}',-1)" ${ai === 0 ? 'disabled' : ''}>▲</button>
+            <button class="chip-arr-btn" onclick="moveChipItem('other','${esc(a)}',1)"  ${ai === ordUng.length-1 ? 'disabled' : ''}>▼</button>
+          </div>
+        </div>`;
+      });
+      html += `</div>`;
+    }
+  }
+
+  return html;
+}
+
+function switchChipVisTab(tab) {
+  window._chipVisTab = tab;
+  _buildChipVisPopup();
+}
+
+function moveChipGroup(groupId, dir) {
+  if (!window._liveOrder) window._liveOrder = { groups: [], items: {} };
+  const study  = currentStudy();
+  if (!study) return;
+  const groups = study.activityGroups || [];
+
+  // Build current ordered group id list
+  const allIds = groups.map(g => g.id);
+  let order = window._liveOrder.groups.length
+    ? [...window._liveOrder.groups]
+    : [...allIds];
+  // Ensure all ids present
+  allIds.forEach(id => { if (!order.includes(id)) order.push(id); });
+  order = order.filter(id => allIds.includes(id));
+
+  const idx = order.indexOf(groupId);
+  if (idx < 0) return;
+  const newIdx = idx + dir;
+  if (newIdx < 0 || newIdx >= order.length) return;
+  [order[idx], order[newIdx]] = [order[newIdx], order[idx]];
+  window._liveOrder.groups = order;
+
+  _refreshChipsInPlace();
+  _buildChipVisPopup();
+}
+
+function moveChipItem(groupId, activityName, dir) {
+  if (!window._liveOrder) window._liveOrder = { groups: [], items: {} };
+  if (!window._liveOrder.items) window._liveOrder.items = {};
+  const study = currentStudy();
+  if (!study) return;
+  const groups = study.activityGroups || [];
+
+  // Build current item list for this group
+  let baseItems;
+  if (groupId === 'other') {
+    const groupedNames = new Set(groups.flatMap(g => g.activities));
+    baseItems = study.activities.filter(a => !groupedNames.has(a));
+  } else {
+    const g = groups.find(g => g.id === groupId);
+    baseItems = g ? g.activities.filter(a => study.activities.includes(a)) : [];
+  }
+
+  let order = window._liveOrder.items[groupId]
+    ? [...window._liveOrder.items[groupId]]
+    : [...baseItems];
+  // Ensure all items present
+  baseItems.forEach(n => { if (!order.includes(n)) order.push(n); });
+  order = order.filter(n => baseItems.includes(n));
+
+  const idx = order.indexOf(activityName);
+  if (idx < 0) return;
+  const newIdx = idx + dir;
+  if (newIdx < 0 || newIdx >= order.length) return;
+  [order[idx], order[newIdx]] = [order[newIdx], order[idx]];
+  window._liveOrder.items[groupId] = order;
+
+  _refreshChipsInPlace();
+  _buildChipVisPopup();
+}
+
+function _hasCustomOrder() {
+  if (!window._liveOrder) return false;
+  if ((window._liveOrder.groups || []).length > 0) return true;
+  return Object.values(window._liveOrder.items || {}).some(a => a.length > 0);
+}
+
+function resetChipOrder() {
+  window._liveOrder = { groups: [], items: {} };
+  _refreshChipsInPlace();
+  _buildChipVisPopup();
+}
+function _updatePopupPillForGroup(groupId, mode) {
+  const popup = document.getElementById('chip-vis-popup');
+  if (!popup || !window._liveHidden) return;
+  const study = currentStudy();
+  if (!study) return;
+  const ns = window._liveHidden[mode] || { hiddenGroups: new Set(), hiddenItems: new Set() };
+  const isHidden = ns.hiddenGroups.has(groupId);
+  const safeId = CSS.escape(groupId);
+
+  const grpPill = document.getElementById(`chip-vis-pill-grp-${mode}-${safeId}`);
+  if (grpPill) {
+    grpPill.textContent = isHidden ? 'Hidden' : 'Visible';
+    grpPill.className   = `chip-vis-toggle${isHidden ? '' : ' on'}`;
+  }
+
+  const itemsContainer = document.getElementById(`chip-vis-items-${mode}-${safeId}`);
+  if (itemsContainer) {
+    if (isHidden) {
+      itemsContainer.innerHTML = '';
+    } else {
+      const groups     = study.activityGroups || [];
+      const activities = study.activities || [];
+      const quickAdds  = activities.filter(a => study.manualStd[a] || getAutoAvg(study, a));
+      const actList    = mode === 'qa' ? quickAdds : activities;
+      const g          = groupId === 'other' ? null : groups.find(g => g.id === groupId);
+      const groupedNames = new Set(groups.flatMap(g => g.activities));
+      const items      = g
+        ? g.activities.filter(a => actList.includes(a))
+        : actList.filter(a => !groupedNames.has(a));
+      itemsContainer.innerHTML = items.map(a => {
+        const itemHidden = ns.hiddenItems.has(a);
+        const safeA = CSS.escape(a);
+        return `<div class="chip-vis-row chip-vis-item-row" onclick="toggleChipItem('${esc(a)}','${mode}')">
+          <span class="chip-vis-row-label chip-vis-indent">${esc(a)}</span>
+          <span class="chip-vis-toggle ${itemHidden ? '' : 'on'}" id="chip-vis-pill-item-${mode}-${safeA}">${itemHidden ? 'Hidden' : 'Visible'}</span>
+        </div>`;
+      }).join('');
+    }
+  }
+  _updatePopupResetBtn();
+}
+
+function _updatePopupPillForItem(activityName, mode) {
+  if (!window._liveHidden) return;
+  const ns = window._liveHidden[mode] || { hiddenGroups: new Set(), hiddenItems: new Set() };
+  const isHidden = ns.hiddenItems.has(activityName);
+  const safeA = CSS.escape(activityName);
+  const pill = document.getElementById(`chip-vis-pill-item-${mode}-${safeA}`);
+  if (pill) {
+    pill.textContent = isHidden ? 'Hidden' : 'Visible';
+    pill.className   = `chip-vis-toggle${isHidden ? '' : ' on'}`;
+  }
+  _updatePopupResetBtn();
+}
+
+function _updatePopupResetBtn() {
+  const btn = document.getElementById('chip-vis-reset-btn');
+  if (!btn) return;
+  const qsNs = (window._liveHidden || {}).qs || { hiddenGroups: new Set(), hiddenItems: new Set() };
+  const qaNs = (window._liveHidden || {}).qa || { hiddenGroups: new Set(), hiddenItems: new Set() };
+  const total = qsNs.hiddenGroups.size + qsNs.hiddenItems.size + qaNs.hiddenGroups.size + qaNs.hiddenItems.size;
+  btn.style.visibility = total > 0 ? 'visible' : 'hidden';
+}
+
+function resetChipVisibility() {
+  if (!window._liveHidden) return;
+  ['qs', 'qa'].forEach(mode => {
+    if (window._liveHidden[mode]) {
+      window._liveHidden[mode].hiddenGroups.clear();
+      window._liveHidden[mode].hiddenItems.clear();
+    }
+  });
+  _refreshChipsInPlace();
+  _buildChipVisPopup();
 }
 
 function toggleSessionCollapse(id) {
@@ -2084,6 +4100,7 @@ function toggleSessionCollapse(id) {
 }
 
 function liveStart() {
+  // Legacy: select-based start (no longer rendered, kept for safety)
   const sel = document.getElementById('live-act-select');
   const act = sel ? sel.value.trim() : '';
   if (!act) { alert('Select an activity.'); return; }
@@ -2115,8 +4132,7 @@ function sessionToggleException(id, val) {
 // Re-render live tab fully when keyboard dismisses (input loses focus)
 // so paused badge, colors etc. stay in sync without breaking keyboard
 document.addEventListener('focusout', e => {
-  if (activeTab === 'live' && activeSessions.length > 0) {
-    // Small delay so the browser finishes the blur event before we redraw
+  if (activeTab === 'live' && (activeSessions.length > 0 || onDemandTimers.length > 0)) {
     setTimeout(() => {
       const still = document.activeElement;
       const stillTyping = still && (still.tagName === 'INPUT' || still.tagName === 'TEXTAREA' || still.tagName === 'SELECT');
@@ -2253,16 +4269,13 @@ function renderSessionImgStrip(sessionId) {
 // Render image strip for a saved entry (in log)
 function renderEntryImgStrip(entry) {
   const imgs = entry.images || [];
-  if (imgs.length === 0) return `<div class="img-strip">
-    <div class="img-add-btn" onclick="entryAddImage(${entry.id})">📷 Add photo</div>
-  </div>`;
+  if (imgs.length === 0) return ''; // add button is now top-right of entry
   let html = `<div class="img-strip">`;
   imgs.forEach(img => {
     html += `<div class="img-thumb-wrap" onclick="openLightboxEntry(${entry.id},'${img.id}')">
                <img src="${img.dataUrl}" alt="">
              </div>`;
   });
-  html += `<div class="img-add-btn" onclick="entryAddImage(${entry.id})">📷 Add photo</div>`;
   html += `</div>`;
   return html;
 }
@@ -2637,92 +4650,112 @@ function _renderLogEntries() {
   dates.forEach(date => {
     html += `<div class="date-heading">${date}</div>`;
     groups[date].forEach(e => {
-      const dur     = secsToStr(e.duration);
-      const timeRange = `${displayTime(e, 'start', mode)} → ${displayTime(e, 'end', mode)}`;
+      const dur       = secsToStr(e.duration);
+      const startStr  = displayTime(e, 'start', mode);
+      const endStr    = displayTime(e, 'end', mode);
       const imgCount  = (e.images || []).length;
       const grp       = getActivityGroup(study, e.activity);
       const eColor    = getActivityColor(study, e.activity);
       const activityOptions = (study ? study.activities : [])
         .map(a => `<option value="${esc(a)}" ${a === e.activity ? 'selected' : ''}>${esc(a)}</option>`)
         .join('');
+
+      // Group chip — only rendered if activity belongs to a group
+      const groupChip = grp
+        ? `<span class="group-badge" style="background:${grp.color}22;color:${grp.color};border:1px solid ${grp.color}55;">
+             <span class="group-dot" style="background:${grp.color};width:6px;height:6px;"></span>${esc(grp.name)}
+           </span>`
+        : '';
+
+      const exceptionBadge = e.exception ? `<span class="badge badge-amber">Exception</span>` : '';
+      const hasGroupLine   = groupChip || exceptionBadge;
+
       html += `
       <div class="entry-row-wrap">
         <div class="swipe-delete-bg">🗑</div>
         <div class="entry-row-inner">
-        <div class="entry-row" id="entry-row-${e.id}" style="flex-direction:column;align-items:stretch;${eColor ? `border-left-color:${eColor};` : ''}">
-        <div style="display:flex;align-items:flex-start;gap:10px;">
-          <div class="entry-info">
-            <div class="entry-activity" id="act-label-${e.id}">${esc(e.activity)}</div>
-            <div class="entry-times">${timeRange} · ${dur}</div>
-            ${e.note ? `<div class="entry-note-preview" id="note-preview-${e.id}">${esc(e.note)}</div>` : `<div class="entry-note-preview" id="note-preview-${e.id}" style="display:none;"></div>`}
-            <div class="entry-badges">
-              ${grp ? `<span class="group-badge" style="background:${grp.color}22;color:${grp.color};border:1px solid ${grp.color}55;"><span class="group-dot" style="background:${grp.color};width:6px;height:6px;"></span>${esc(grp.name)}</span>` : ''}
-              ${e.exception ? '<span class="badge badge-amber">Exception</span>' : ''}
-              ${imgCount > 0 ? `<span class="badge badge-blue">📷 ${imgCount}</span>` : ''}
+        <div class="entry-row" id="entry-row-${e.id}" style="${eColor ? `border-left-color:${eColor};` : ''}">
+
+          <div class="entry-main-row">
+            <div class="entry-info">
+              <div class="entry-activity" id="act-label-${e.id}">${esc(e.activity)}</div>
+              <div class="entry-timestamp">${startStr} → ${endStr}</div>
+              <div class="entry-duration">${dur}</div>
+              ${hasGroupLine ? `<div class="entry-group-line">${groupChip}${exceptionBadge}</div>` : ''}
+              ${e.note ? `<div class="entry-note-preview" id="note-preview-${e.id}">${esc(e.note)}</div>` : `<div class="entry-note-preview" id="note-preview-${e.id}" style="display:none;"></div>`}
+            </div>
+            <div class="entry-right-col">
+              <div style="display:flex;gap:4px;justify-content:flex-end;">
+                <button class="entry-action-btn" onclick="entryAddImage(${e.id})" title="Add photo">📷</button>
+                <button class="entry-action-btn" id="entry-action-btn-${e.id}"
+                  onclick="toggleEntryActions(${e.id})" title="Actions">⋯</button>
+              </div>
+              ${imgCount > 0 ? `<div class="entry-thumb-corner" onclick="openLightboxEntry(${e.id},'${(e.images[0]||{}).id}')">
+                <img src="${(e.images[0]||{}).dataUrl}" alt="">
+                ${imgCount > 1 ? `<span class="entry-thumb-count">+${imgCount - 1}</span>` : ''}
+              </div>` : ''}
             </div>
           </div>
-          <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;">
-            <button class="btn btn-ghost btn-xs" onclick="toggleReclassify(${e.id})" id="reclass-btn-${e.id}" title="Reclassify activity">🔀</button>
-            <button class="btn btn-ghost btn-xs" onclick="toggleNoteEdit(${e.id})" id="note-btn-${e.id}" title="Edit note">✏</button>
-            <button class="btn btn-ghost btn-xs" onclick="toggleDurationEdit(${e.id})" id="dur-btn-${e.id}" title="Edit duration">⏱</button>
-            <button class="btn btn-red btn-xs" onclick="logDelete(${e.id})">🗑</button>
+
+          <div id="entry-actions-${e.id}" class="entry-actions-panel" style="display:none;">
+            <button class="btn btn-ghost btn-xs" onclick="toggleReclassify(${e.id})" id="reclass-btn-${e.id}" title="Reclassify">🔀 Reclassify</button>
+            <button class="btn btn-ghost btn-xs" onclick="toggleNoteEdit(${e.id})" id="note-btn-${e.id}" title="Edit note">✏ Note</button>
+            <button class="btn btn-ghost btn-xs" onclick="toggleDurationEdit(${e.id})" id="dur-btn-${e.id}" title="Edit duration">⏱ Duration</button>
+            <button class="btn btn-red btn-xs" onclick="logDelete(${e.id})">🗑 Delete</button>
           </div>
-        </div>
-        <div id="reclass-edit-${e.id}" style="display:none;margin-top:8px;">
-          <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:4px;">Reclassify activity</label>
-          <select id="reclass-sel-${e.id}"
-            style="width:100%;padding:8px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-family:var(--font);font-size:13px;margin-bottom:6px;">
-            ${activityOptions}
-          </select>
-          <div style="display:flex;gap:6px;">
-            <button class="btn btn-primary btn-xs" onclick="saveReclassify(${e.id})">Save</button>
-            <button class="btn btn-ghost btn-xs" onclick="cancelReclassify(${e.id})">Cancel</button>
-          </div>
-        </div>
-        <div id="dur-edit-${e.id}" style="display:none;margin-top:8px;">
-          <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:6px;">Edit Duration</label>
-          <div style="display:flex;flex-direction:column;gap:8px;">
-            <div style="display:flex;align-items:center;gap:8px;">
-              <label style="font-size:11px;width:52px;flex-shrink:0;">Start</label>
-              <input type="time" step="1" id="dur-start-${e.id}"
-                value="${e.startTs ? new Date(e.startTs).toTimeString().slice(0,8) : ''}"
-                oninput="onDurStartChange(${e.id})"
-                style="flex:1;">
-            </div>
-            <div style="display:flex;align-items:center;gap:8px;">
-              <label style="font-size:11px;width:52px;flex-shrink:0;">End</label>
-              <input type="time" step="1" id="dur-end-${e.id}"
-                value="${e.endTs ? new Date(e.endTs).toTimeString().slice(0,8) : ''}"
-                oninput="onDurEndChange(${e.id})"
-                style="flex:1;">
-            </div>
-            <div style="display:flex;align-items:center;gap:8px;">
-              <label style="font-size:11px;width:52px;flex-shrink:0;">Duration</label>
-              <input type="time" step="1" id="dur-hms-${e.id}"
-                value="${secsToHMSInput(e.duration)}"
-                oninput="onDurHmsChange(${e.id})"
-                style="flex:1;">
+          ${imgCount > 1 ? `<div id="entry-img-strip-${e.id}" style="display:none;">${renderEntryImgStrip(e)}</div>` : ''}
+
+          <div id="reclass-edit-${e.id}" style="display:none;margin-top:8px;">
+            <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:4px;">Reclassify activity</label>
+            <select id="reclass-sel-${e.id}"
+              style="width:100%;padding:8px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-family:var(--font);font-size:13px;margin-bottom:6px;">
+              ${activityOptions}
+            </select>
+            <div style="display:flex;gap:6px;">
+              <button class="btn btn-primary btn-xs" onclick="saveReclassify(${e.id})">Save</button>
+              <button class="btn btn-ghost btn-xs" onclick="cancelReclassify(${e.id})">Cancel</button>
             </div>
           </div>
-          <div style="font-size:11px;color:var(--text3);margin-top:4px;" id="dur-hint-${e.id}">
-            Editing duration recalculates end time. Editing start or end recalculates duration.
+          <div id="dur-edit-${e.id}" style="display:none;margin-top:8px;">
+            <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:6px;">Edit Duration</label>
+            <div style="display:flex;flex-direction:column;gap:8px;">
+              <div style="display:flex;align-items:center;gap:8px;">
+                <label style="font-size:11px;width:52px;flex-shrink:0;">Start</label>
+                <input type="time" step="1" id="dur-start-${e.id}"
+                  value="${e.startTs ? new Date(e.startTs).toTimeString().slice(0,8) : ''}"
+                  oninput="onDurStartChange(${e.id})" style="flex:1;">
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <label style="font-size:11px;width:52px;flex-shrink:0;">End</label>
+                <input type="time" step="1" id="dur-end-${e.id}"
+                  value="${e.endTs ? new Date(e.endTs).toTimeString().slice(0,8) : ''}"
+                  oninput="onDurEndChange(${e.id})" style="flex:1;">
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <label style="font-size:11px;width:52px;flex-shrink:0;">Duration</label>
+                <input type="time" step="1" id="dur-hms-${e.id}"
+                  value="${secsToHMSInput(e.duration)}"
+                  oninput="onDurHmsChange(${e.id})" style="flex:1;">
+              </div>
+            </div>
+            <div style="font-size:11px;color:var(--text3);margin-top:4px;" id="dur-hint-${e.id}">
+              Editing duration recalculates end time. Editing start or end recalculates duration.
+            </div>
+            <div style="display:flex;gap:6px;margin-top:8px;">
+              <button class="btn btn-primary btn-xs" onclick="saveDurationEdit(${e.id})">Save</button>
+              <button class="btn btn-ghost btn-xs" onclick="cancelDurationEdit(${e.id})">Cancel</button>
+            </div>
           </div>
-          <div style="display:flex;gap:6px;margin-top:8px;">
-            <button class="btn btn-primary btn-xs" onclick="saveDurationEdit(${e.id})">Save</button>
-            <button class="btn btn-ghost btn-xs" onclick="cancelDurationEdit(${e.id})">Cancel</button>
+          <div id="note-edit-${e.id}" style="display:none;margin-top:8px;">
+            <textarea id="note-ta-${e.id}"
+              style="width:100%;box-sizing:border-box;min-height:72px;padding:8px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-family:var(--font);font-size:13px;resize:vertical;"
+              placeholder="Add a note…">${esc(e.note || '')}</textarea>
+            <div style="display:flex;gap:6px;margin-top:6px;">
+              <button class="btn btn-primary btn-xs" onclick="saveNoteEdit(${e.id})">Save</button>
+              <button class="btn btn-ghost btn-xs" onclick="cancelNoteEdit(${e.id})">Cancel</button>
+            </div>
           </div>
-        </div>
-        <div id="note-edit-${e.id}" style="display:none;margin-top:8px;">
-          <textarea id="note-ta-${e.id}"
-            style="width:100%;box-sizing:border-box;min-height:72px;padding:8px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-family:var(--font);font-size:13px;resize:vertical;"
-            placeholder="Add a note…">${esc(e.note || '')}</textarea>
-          <div style="display:flex;gap:6px;margin-top:6px;">
-            <button class="btn btn-primary btn-xs" onclick="saveNoteEdit(${e.id})">Save</button>
-            <button class="btn btn-ghost btn-xs" onclick="cancelNoteEdit(${e.id})">Cancel</button>
           </div>
-        </div>
-        ${renderEntryImgStrip(e)}
-      </div>
         </div>
       </div>`;
     });
@@ -2770,6 +4803,17 @@ function _renderLogEntries() {
       });
     });
   }
+}
+
+function toggleEntryActions(id) {
+  const panel = document.getElementById(`entry-actions-${id}`);
+  const btn   = document.getElementById(`entry-action-btn-${id}`);
+  const strip = document.getElementById(`entry-img-strip-${id}`);
+  if (!panel) return;
+  const opening = panel.style.display === 'none';
+  panel.style.display = opening ? 'flex' : 'none';
+  if (strip) strip.style.display = opening ? 'block' : 'none';
+  if (btn) btn.classList.toggle('open', opening);
 }
 
 function toggleReclassify(id) {
@@ -3514,10 +5558,15 @@ function _openNotesPanel() {
   if (ta && p) ta.value = p.notes || '';
   panel.classList.add('open');
   if (fab) { fab.textContent = '✕'; fab.title = 'Close notes'; fab.style.opacity = '0'; fab.style.pointerEvents = 'none'; }
-  setTimeout(() => {
-    const ta = document.getElementById('notes-panel-ta');
-    if (ta) ta.focus();
-  }, 290);
+  // Backdrop — tapping outside the panel closes it
+  if (!document.getElementById('notes-backdrop')) {
+    const bd = document.createElement('div');
+    bd.id = 'notes-backdrop';
+    bd.style.cssText = 'position:fixed;inset:0;z-index:498;';
+    bd.addEventListener('click', _closeNotesPanel);
+    document.body.appendChild(bd);
+  }
+  // No auto-focus — keyboard opens only when the user taps the textarea
 }
 
 function _closeNotesPanel() {
@@ -3526,6 +5575,8 @@ function _closeNotesPanel() {
   if (!panel) return;
   panel.classList.remove('open');
   if (fab) { fab.textContent = '📝'; fab.title = 'Quick Notes'; fab.style.opacity = ''; fab.style.pointerEvents = ''; }
+  const bd = document.getElementById('notes-backdrop');
+  if (bd) bd.remove();
 }
 
 function _notesPanelInput() {
@@ -4314,22 +6365,207 @@ function deleteProfile(id) {
 }
 
 // ===== PROFILE MODAL =====
-function openProfileModal() {
-  const el = document.getElementById('profile-modal-list');
-  el.innerHTML = db.profiles.map(p => `
-  <div class="profile-item ${p.id === db.activeProfileId ? 'active' : ''}" style="cursor:pointer;" onclick="switchProfileModal('${p.id}')">
-    <div class="profile-item-name">${esc(p.name)}</div>
-    ${p.id === db.activeProfileId ? '<span class="badge badge-green">Active</span>' : ''}
-  </div>`).join('');
-  openModal('profile-modal');
+function openProfileModal() { toggleContextPanel(); } // compat alias
+
+function toggleContextPanel() {
+  const panel = document.getElementById('context-panel');
+  if (!panel) return;
+  const isOpen = panel.style.display !== 'none';
+  if (isOpen) {
+    panel.style.display = 'none';
+    const chip = document.getElementById('profile-chip');
+    if (chip) chip.style.background = '';
+  } else {
+    renderContextPanel();
+    panel.style.display = 'block';
+    const chip = document.getElementById('profile-chip');
+    if (chip) chip.style.background = 'var(--surface2)';
+    // Close on outside click
+    setTimeout(() => {
+      document.addEventListener('click', _closeContextPanelOutside, { once: true, capture: true });
+    }, 0);
+  }
 }
 
-function switchProfileModal(id) {
+function _closeContextPanelOutside(e) {
+  const panel = document.getElementById('context-panel');
+  const chip  = document.getElementById('profile-chip');
+  if (panel && !panel.contains(e.target) && chip && !chip.contains(e.target)) {
+    panel.style.display = 'none';
+    if (chip) chip.style.background = '';
+  } else {
+    // Re-attach if click was inside
+    document.addEventListener('click', _closeContextPanelOutside, { once: true, capture: true });
+  }
+}
+
+function closeContextPanel() {
+  const panel = document.getElementById('context-panel');
+  if (panel) panel.style.display = 'none';
+  const chip = document.getElementById('profile-chip');
+  if (chip) chip.style.background = '';
+  document.removeEventListener('click', _closeContextPanelOutside, true);
+}
+
+function renderContextPanel() {
+  const panel = document.getElementById('context-panel');
+  if (!panel) return;
+
+  // Constrain to app width on desktop
+  const app = document.getElementById('app');
+  if (app) {
+    const rect = app.getBoundingClientRect();
+    panel.style.left  = rect.left + 'px';
+    panel.style.right = (window.innerWidth - rect.right) + 'px';
+    panel.style.width = '';
+  }
+
+  const p = currentProfile();
+  const studies = p ? (p.studies || []) : [];
+
+  // ── Profiles section ──
+  let html = `<div style="padding:10px var(--pad) 6px;font-family:var(--mono);font-size:9px;
+    font-weight:700;text-transform:uppercase;letter-spacing:0.12em;color:var(--text3);
+    background:var(--surface2);border-bottom:1px solid var(--border);">Profile</div>`;
+
+  html += `<div style="display:flex;flex-wrap:wrap;gap:6px;padding:10px var(--pad);">`;
+  db.profiles.forEach(prof => {
+    const isActive = prof.id === db.activeProfileId;
+    html += `<button onclick="switchProfilePanel('${prof.id}')"
+      style="padding:5px 12px;border-radius:20px;border:1px solid ${isActive ? 'var(--accent)' : 'var(--border)'};
+             background:${isActive ? 'var(--blue-bg)' : 'var(--surface2)'};
+             color:${isActive ? 'var(--blue)' : 'var(--text2)'};
+             font-size:12px;font-weight:${isActive ? '700' : '500'};
+             font-family:var(--font);cursor:pointer;white-space:nowrap;">
+      ${isActive ? '✓ ' : ''}${esc(prof.name)}
+    </button>`;
+  });
+  html += `</div>`;
+
+  // ── Studies section ──
+  html += `<div style="padding:6px var(--pad) 6px;font-family:var(--mono);font-size:9px;
+    font-weight:700;text-transform:uppercase;letter-spacing:0.12em;color:var(--text3);
+    background:var(--surface2);border-top:1px solid var(--border);border-bottom:1px solid var(--border);">
+    Studies — ${p ? p.name : ''}
+  </div>`;
+
+  // Existing studies list
+  studies.forEach(s => {
+    const isActive = p && s.id === p.activeStudyId;
+    const count = s.entries.filter(e => !e.deletedAt).length;
+    html += `<div style="display:flex;align-items:center;gap:8px;padding:8px var(--pad);
+      border-bottom:1px solid var(--border);cursor:pointer;background:${isActive ? 'var(--green-bg)' : 'transparent'};"
+      onclick="switchStudyPanel('${s.id}')">
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:${isActive ? '700' : '500'};color:${isActive ? 'var(--green)' : 'var(--text)'};
+          white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+          ${isActive ? '✓ ' : ''}${esc(s.name)}
+        </div>
+        <div style="font-size:10px;color:var(--text3);font-family:var(--mono);">${s.date} · ${count} entries</div>
+      </div>
+      <div style="display:flex;gap:4px;" onclick="event.stopPropagation()">
+        <button class="btn btn-ghost btn-xs" onclick="duplicateStudyPanel('${s.id}')" title="Duplicate">⧉</button>
+        <button class="btn btn-red btn-xs" onclick="deleteStudyPanel('${s.id}')" title="Delete">🗑</button>
+      </div>
+    </div>`;
+  });
+
+  // New study form
+  html += `<div style="padding:10px var(--pad) 12px;border-top:1px solid var(--border);">
+    <div style="font-size:11px;color:var(--text3);font-family:var(--mono);margin-bottom:6px;
+      text-transform:uppercase;letter-spacing:0.08em;">New Study</div>
+    <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+      <input id="ctx-study-name" type="text" placeholder="Study name"
+        style="flex:1;min-width:120px;padding:7px 10px;font-size:12px;border-radius:var(--radius);
+               border:1px solid var(--border);background:var(--surface);color:var(--text);"
+        onkeydown="if(event.key==='Enter') addStudyPanel()">
+      <input id="ctx-study-date" type="date" value="${todayStr()}"
+        style="width:130px;padding:7px 8px;font-size:12px;border-radius:var(--radius);
+               border:1px solid var(--border);background:var(--surface);color:var(--text);">
+      <button class="btn btn-primary btn-sm" onclick="addStudyPanel()">+ Create</button>
+    </div>
+  </div>`;
+
+  panel.innerHTML = html;
+}
+
+function switchProfilePanel(id) {
   db.activeProfileId = id;
   saveDb();
-  closeModal('profile-modal');
+  updateTopBar();
+  renderContextPanel();
   render();
 }
+
+function switchStudyPanel(id) {
+  const p = currentProfile();
+  if (!p) return;
+  p.activeStudyId = id;
+  saveDb();
+  updateTopBar();
+  renderContextPanel();
+  render();
+}
+
+function addStudyPanel() {
+  const nameEl = document.getElementById('ctx-study-name');
+  const dateEl = document.getElementById('ctx-study-date');
+  const name   = nameEl ? nameEl.value.trim() : '';
+  const date   = (dateEl ? dateEl.value : '') || todayStr();
+  if (!name) { nameEl && nameEl.focus(); return; }
+  const p = currentProfile();
+  if (!p) return;
+  const id = generateId();
+  p.studies.push({ id, name, date, activities: [], entries: [], manualStd: {},
+    quickAddPinned: null, activityGroups: [], quickStartPinned: null,
+    activityColors: {}, activityNotes: {} });
+  p.activeStudyId = id;
+  saveDb();
+  updateTopBar();
+  renderContextPanel();
+  render();
+}
+
+function deleteStudyPanel(id) {
+  const p = currentProfile();
+  if (!p) return;
+  const study = p.studies.find(s => s.id === id);
+  if (!study) return;
+  if (!confirm(`Delete study "${study.name}"?`)) return;
+  study.entries.forEach(e => {
+    e.deletedAt = Date.now();
+    e._studyId = id;
+    e._profileId = db.activeProfileId;
+    db.recyclebin.push(e);
+  });
+  p.studies = p.studies.filter(s => s.id !== id);
+  if (p.activeStudyId === id) p.activeStudyId = p.studies[0] && p.studies[0].id;
+  saveDb();
+  updateTopBar();
+  renderContextPanel();
+  render();
+}
+
+function duplicateStudyPanel(id) {
+  const p = currentProfile();
+  if (!p) return;
+  const src = p.studies.find(s => s.id === id);
+  if (!src) return;
+  const newId = generateId();
+  p.studies.push({
+    id: newId, name: src.name + ' (copy)', date: todayStr(),
+    activities: [...src.activities], entries: [], manualStd: { ...src.manualStd },
+    quickAddPinned: src.quickAddPinned ? [...src.quickAddPinned] : null,
+    activityGroups: src.activityGroups ? src.activityGroups.map(g => ({...g, activities: [...g.activities]})) : [],
+    quickStartPinned: src.quickStartPinned ? [...src.quickStartPinned] : null,
+    activityColors: src.activityColors ? {...src.activityColors} : {},
+    activityNotes:  src.activityNotes  ? {...src.activityNotes}  : {}
+  });
+  saveDb();
+  renderContextPanel();
+}
+
+function switchProfileModal(id) { switchProfilePanel(id); } // compat
 
 // ===== RECYCLE BIN MODAL =====
 function openBinModal() {
